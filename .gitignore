@@ -1,0 +1,24 @@
+# Build artifacts
+*.o
+*.a
+*.so
+*.so.*
+
+# Build directories
+build/
+build-host/
+
+# Config (generated from config.*.mak)
+config.mak
+
+# Test artifacts
+testgnm
+surf.bin
+test.png
+
+# Editor / OS
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
