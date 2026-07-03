@@ -504,10 +504,10 @@ cleanly with `clang -c`.
 ### Phase 5: Tests + Integration [PARTIAL]
 
 Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) and 7.
-Host-side tests and OpenOrbis link validation are complete; PS4 hardware validation
-remains. Downstream Eden/example integration is tracked separately because those
-projects consume the older `freegnm` `gnm*` wrapper API, not the Sony SDK-style
-`sceGnm*` ABI that opengnm exposes.
+Host-side tests and OpenOrbis link validation are complete. A PS4 hardware-smoke
+ELF now builds; running it on hardware remains. Downstream Eden/example integration
+is tracked separately because those projects consume the older `freegnm` `gnm*`
+wrapper API, not the Sony SDK-style `sceGnm*` ABI that opengnm exposes.
 
 **Deliverables:**
 - `tests/test_surface.c` — gpuaddr surface computation (7 tests) ✅
@@ -515,11 +515,13 @@ projects consume the older `freegnm` `gnm*` wrapper API, not the Sony SDK-style
 - `tests/test_validate.c` — PM4 validation, generic backend (9 tests) ✅
 - `tests/test_api.c` — Call every sceGnm* category once (18 tests) ✅
 - `tests/link_smoke.c` — PS4-target link smoke against OpenOrbis SDK libs ✅
+- `tests/hardware_smoke.c` — PS4 direct-memory + submit/EOP smoke ELF ✅ buildable
 - `tests/test.h` — minimal test framework (utassert/utasserteq/test_suite) ✅
 - `tests/test_main.c` — harness entry point ✅
 - CMakeLists.txt: opengnm_tests target + ctest registration ✅
 - Makefile: tests target ✅
 - Makefile: `link-smoke` target for `PLATFORM=orbis` ✅
+- Makefile: `hardware-smoke` target for `PLATFORM=orbis` ✅
 - Full OpenOrbis Docker/orbis build + link smoke (`./build.sh docker-build`) ✅
 - Assess Eden/example direct-opengnm integration — DONE: not a valid direct gate
   until a `gnm*` compatibility adapter or downstream migration exists
@@ -528,8 +530,9 @@ projects consume the older `freegnm` `gnm*` wrapper API, not the Sony SDK-style
 **Gate P5A (PASSED):** All 50 host tests pass on generic backend via CMake/CTest,
 strict CMake warning build, and `build.sh tests` / Makefile.
 
-**Gate P5B (IN PROGRESS):** OpenOrbis Docker/orbis compile and link smoke succeed.
-Remaining gate: a PS4 smoke test executes a minimal draw/submit path on hardware.
+**Gate P5B (IN PROGRESS):** OpenOrbis Docker/orbis compile, link smoke, and
+hardware-smoke ELF build succeed. Remaining gate: run `opengnm_hw_smoke.elf` on
+PS4 hardware and confirm the EOP label write after submit.
 
 **Deferred downstream migration:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`, `GnmCommandBuffer`,
@@ -554,8 +557,11 @@ Review pass against shadPS4 and firmware-derived behavior found and fixed:
 - `sceGnmDrawCmdDrawIndexOffset` delegates to the ABI-aware driver path.
 - `build.sh` generated configs include `-I./src`, and Makefile compile loops fail fast.
 - OpenOrbis Docker now uses the SDK path present in the official image and runs a
-  PS4-target `link-smoke` executable link against `libopengnm.a`, `libkernel`, and
-  `libSceGnmDriver`.
+  PS4-target `link-smoke` executable link against `libopengnm.a`, `libkernel`,
+  `libSceGnmDriver`, and `libSceVideoOut`.
+- Added a buildable PS4 hardware smoke ELF that allocates garlic direct memory,
+  emits default hardware state, a zero-work draw packet, an EOP write, and submits
+  through `sceGnmSubmitCommandBuffers`/`sceGnmSubmitDone`.
 
 Regression coverage added in `tests/test_drawcmd.c` for callback growth, small
 `AllocInside`, exact DrawIndexOffset sizing, null index address rejection, SGPR offset
@@ -636,7 +642,7 @@ rejection, and NEO slice-bit preservation.
 | Missing firmware symbol at link | Med | Med | Declare externs; link test on orbis |
 | Struct layout drift | Low | High | `_Static_assert` every struct size |
 | OpenOrbis header conflict | Med | Med | Don't include `orbis/_types/gnm.h` |
-| Orbis runtime mismatch | Med | High | Gate P5B: Docker/orbis link smoke passed; PS4 smoke test remains |
+| Orbis runtime mismatch | Med | High | Gate P5B: Docker/orbis link + hardware-smoke build passed; PS4 run remains |
 | Host backend PM4 edge-case drift | Med | High | Regression tests + shadPS4/firmware diffs |
 | Stream-out buffer base address incomplete | Med | Med | RE `STRMOUT_BUFFER_UPDATE`/base-address behavior before wiring |
 | Eden/freegnm downstream migration breaks builds | Med | Med | Keep as separate adapter/migration phase; not an opengnm ABI gate |
@@ -652,11 +658,12 @@ rejection, and NEO slice-bit preservation.
 3. **Phase 3 (DONE)** — Runtime delegation (orbis backend). 74 real externs + 14 sceGnmDriver* wrappers + 172 retail stubs + 11 validate stubs + 2 platform functions.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
 5. **Phase 5A (DONE)** — Host tests (50 tests, all passing via CMake/CTest and Makefile).
-6. **Phase 5B (IN PROGRESS)** — OpenOrbis/orbis build + link smoke done; PS4 smoke test remains.
+6. **Phase 5B (IN PROGRESS)** — OpenOrbis/orbis build + link smoke + hardware-smoke ELF done; PS4 smoke run remains.
 7. **Deferred downstream migration** — Add a `gnm*` adapter or migrate Eden/examples to `sceGnm*`.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
-After Phase 5A, host behavior is regression-tested. The OpenOrbis linker path is
-now covered by Phase 5B; after PS4 hardware smoke, opengnm is validated as a
-downstream PS4 SDK replacement. opengnm-psbc (shader compiler) can resume in
-parallel with Phase 5B, but hardware findings should feed back into both projects.
+After Phase 5A, host behavior is regression-tested. The OpenOrbis linker path and
+hardware-smoke artifact are now covered by Phase 5B; after the PS4 hardware run,
+opengnm is validated as a downstream PS4 SDK replacement. opengnm-psbc (shader
+compiler) can resume in parallel with Phase 5B, but hardware findings should feed
+back into both projects.

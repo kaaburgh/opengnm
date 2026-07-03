@@ -8,6 +8,7 @@
 #   ./build.sh tests    — build + run host tests (generic target)
 #   ./build.sh docker-build       — OpenOrbis Docker build + link smoke
 #   ./build.sh docker-link-smoke  — OpenOrbis Docker link smoke only
+#   ./build.sh docker-hardware-smoke — build PS4 hardware smoke ELF
 #   ./build.sh clean    — clean build directory
 #   ./build.sh shell    — open shell in Docker with SDK
 
@@ -52,8 +53,8 @@ AR=ar
 CC=clang
 LD=ld.lld
 CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -I./src -O2 -g --target=x86_64-ps4-elf -fPIC -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include
-LDFLAGS=-m elf_x86_64 -L$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -L. -lopengnm
-LIB_LDFLAGS=-shared -m elf_x86_64 -L$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -L. -lopengnm
+LDFLAGS=-m elf_x86_64 -L$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -lSceVideoOut -L. -lopengnm
+LIB_LDFLAGS=-shared -m elf_x86_64 -L$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -lSceVideoOut -L. -lopengnm
 EOF
 }
 
@@ -87,7 +88,7 @@ case "$ACTION" in
         write_orbis_config
         docker run --rm -v "$OPENGNM_DIR:/opengnm" -w /opengnm \
             -e OO_PS4_TOOLCHAIN="$DOCKER_OO_PS4_TOOLCHAIN" \
-            "$IMAGE" /bin/bash -c "make link-smoke install-lib DESTDIR=/tmp/opengnm-install"
+            "$IMAGE" /bin/bash -c "make link-smoke hardware-smoke install-lib DESTDIR=/tmp/opengnm-install"
         ;;
     docker-link-smoke)
         write_orbis_config
@@ -95,8 +96,14 @@ case "$ACTION" in
             -e OO_PS4_TOOLCHAIN="$DOCKER_OO_PS4_TOOLCHAIN" \
             "$IMAGE" /bin/bash -c "make link-smoke"
         ;;
+    docker-hardware-smoke)
+        write_orbis_config
+        docker run --rm -v "$OPENGNM_DIR:/opengnm" -w /opengnm \
+            -e OO_PS4_TOOLCHAIN="$DOCKER_OO_PS4_TOOLCHAIN" \
+            "$IMAGE" /bin/bash -c "make hardware-smoke"
+        ;;
     *)
-        echo "Usage: $0 {all|lib|headers|tests|clean|shell|docker-build|docker-link-smoke}"
+        echo "Usage: $0 {all|lib|headers|tests|clean|shell|docker-build|docker-link-smoke|docker-hardware-smoke}"
         exit 1
         ;;
 esac

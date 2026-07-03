@@ -55,7 +55,7 @@ LIB_NAME = libopengnm
 LIB_STATIC = $(LIB_NAME).a
 LIB_SHARED = $(LIB_NAME)$(LIBEXT).$(LIBVER)
 
-.PHONY: all lib tools tests link-smoke clean install
+.PHONY: all lib tools tests link-smoke hardware-smoke clean install
 
 all: lib
 
@@ -114,14 +114,29 @@ LINK_SMOKE_SRC = tests/link_smoke.c
 LINK_SMOKE_OBJ = tests/link_smoke.o
 LINK_SMOKE_ELF = opengnm_link_smoke.elf
 
+HW_SMOKE_SRC = tests/hardware_smoke.c
+HW_SMOKE_OBJ = tests/hardware_smoke.o
+HW_SMOKE_ELF = opengnm_hw_smoke.elf
+
 link-smoke: lib
 ifeq ($(PLATFORM),orbis)
 	@echo "CC  $(LINK_SMOKE_SRC)"
 	$(CC) $(CFLAGS) -I./tests -c $(LINK_SMOKE_SRC) -o $(LINK_SMOKE_OBJ)
 	@echo "LD  $(LINK_SMOKE_ELF)"
-	$(LD) -m elf_x86_64 -e main -L$(TOOLCHAIN)/lib -L. $(LINK_SMOKE_OBJ) $(LIB_STATIC) -lc -lkernel -lSceGnmDriver -o $(LINK_SMOKE_ELF)
+	$(LD) -m elf_x86_64 -e main -L$(TOOLCHAIN)/lib -L. $(LINK_SMOKE_OBJ) $(LIB_STATIC) -lc -lkernel -lSceGnmDriver -lSceVideoOut -o $(LINK_SMOKE_ELF)
 else
 	@echo "link-smoke requires PLATFORM=orbis"
+	@exit 1
+endif
+
+hardware-smoke: lib
+ifeq ($(PLATFORM),orbis)
+	@echo "CC  $(HW_SMOKE_SRC)"
+	$(CC) $(CFLAGS) -D_BSD_SOURCE -I./tests -c $(HW_SMOKE_SRC) -o $(HW_SMOKE_OBJ)
+	@echo "LD  $(HW_SMOKE_ELF)"
+	$(LD) -m elf_x86_64 -e main -L$(TOOLCHAIN)/lib -L. $(HW_SMOKE_OBJ) $(LIB_STATIC) -lc -lkernel -lSceGnmDriver -lSceVideoOut -o $(HW_SMOKE_ELF)
+else
+	@echo "hardware-smoke requires PLATFORM=orbis"
 	@exit 1
 endif
 
@@ -129,4 +144,4 @@ endif
 clean:
 	find . -name '*.o' -path '*/src/*' -delete
 	find . -name '*.o' -path '*/tests/*' -delete
-	rm -f $(LIB_STATIC) $(LIB_SHARED) $(TEST_BIN) $(LINK_SMOKE_ELF)
+	rm -f $(LIB_STATIC) $(LIB_SHARED) $(TEST_BIN) $(LINK_SMOKE_ELF) $(HW_SMOKE_ELF)

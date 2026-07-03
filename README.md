@@ -24,9 +24,9 @@ against opengnm unmodified.
 ## Status
 
 Phases 1-4 and Phase 5A are complete. Phase 5B is in progress: the OpenOrbis
-Docker build and a PS4-target link smoke test now pass. All 207+ `sceGnm*`
-functions are implemented across both backends, and the generic host backend
-passes 50 tests via CMake/CTest and Makefile.
+Docker build, PS4-target link smoke, and PS4 hardware-smoke ELF build now pass.
+All 207+ `sceGnm*` functions are implemented across both backends, and the
+generic host backend passes 50 tests via CMake/CTest and Makefile.
 
 Remaining validation is PS4 hardware smoke testing. Eden and `freegnm-examples`
 currently consume the older `gnm*` wrapper API from `freegnm`, so using them with
@@ -62,9 +62,10 @@ make install DESTDIR=$OO_PS4_TOOLCHAIN
 ### Docker
 
 ```sh
-./build.sh docker-build       # OpenOrbis Docker build + PS4-target link smoke
-./build.sh docker-link-smoke  # PS4-target link smoke only
-./build.sh tests              # build + run host tests
+./build.sh docker-build          # OpenOrbis build + link/hardware-smoke ELFs
+./build.sh docker-link-smoke     # PS4-target link smoke only
+./build.sh docker-hardware-smoke # PS4 hardware-smoke ELF only
+./build.sh tests                 # build + run host tests
 ```
 
 ## License
