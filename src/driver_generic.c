@@ -648,6 +648,9 @@ int32_t sceGnmDriverSetVsShader(
 	if (!cmd || numdwords < maxdwords || !vsregs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
+	if (shadermodifier & 0xfcfffc3f) {
+		return GNM_ERROR_CMD_FAILED;
+	}
 	if (pvsregs->spishaderpgmhivs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
@@ -659,9 +662,10 @@ int32_t sceGnmDriverSetVsShader(
 	    cmd, R_00B120_SPI_SHADER_PGM_LO_VS, pgmvs, uasize(pgmvs)
 	);
 
-	const uint32_t pgmrsrc[2] = {
-	    shadermodifier | pvsregs->spishaderpgmrsrc1vs,
-	    pvsregs->spishaderpgmrsrc2vs};
+	const uint32_t rsrc1 = shadermodifier == 0
+	    ? pvsregs->spishaderpgmrsrc1vs
+	    : ((pvsregs->spishaderpgmrsrc1vs & 0xfcfffc3f) | shadermodifier);
+	const uint32_t pgmrsrc[2] = {rsrc1, pvsregs->spishaderpgmrsrc2vs};
 	cmd += setpersistentregisterrange(
 	    cmd, R_00B128_SPI_SHADER_PGM_RSRC1_VS, pgmrsrc, uasize(pgmrsrc)
 	);
@@ -871,19 +875,23 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndexOffset(uint32_t* cmdbuf, uint32_t size,
                                            uint32_t index_offset,
                                            uint32_t index_count,
                                            uint32_t flags) {
-	/* DrawIndexOffset uses DRAW_INDEX_OFFSET_2 packet.
-	 * Not commonly used — emit a simplified version. */
-	if (!cmdbuf || size < 7) {
+	/* DrawIndexOffset uses DRAW_INDEX_OFFSET_2 packet (9 dwords total).
+	 * flags packs SceGnmDrawFlags: bit 0 = predication, bits 29-31 = RT slice offset. */
+	const uint32_t maxdwords = 9;
+	if (!cmdbuf || size < maxdwords) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	(void)flags;
-	cmdbuf[0] = PKT3(PKT3_DRAW_INDEX_OFFSET_2, 4, 0);
+	const uint32_t predicate = flags & 1;
+	const uint32_t rtsliceoffset = (flags >> 29) & 0x7;
+	cmdbuf[0] = PKT3(PKT3_DRAW_INDEX_OFFSET_2, 4, predicate);
 	cmdbuf[1] = index_count;
 	cmdbuf[2] = index_offset;
 	cmdbuf[3] = index_count;
-	cmdbuf[4] = 0;
-	cmdbuf[5] = 0;
+	cmdbuf[4] = rtsliceoffset;
+	cmdbuf[5] = PKT3(PKT3_NOP, 2, 0);
 	cmdbuf[6] = 0;
+	cmdbuf[7] = 0;
+	cmdbuf[8] = 0;
 	return GNM_ERROR_OK;
 }
 
@@ -927,12 +935,17 @@ int32_t PS4_SYSV_ABI sceGnmSetCsShaderWithModifier(uint32_t* cmdbuf,
                                                    uint32_t size,
                                                    const uint32_t* cs_regs,
                                                    uint32_t modifier) {
-	const uint32_t maxdwords = 18;
+	const uint32_t maxdwords = 25;
 	const GnmCsStageRegisters* regs = (const GnmCsStageRegisters*)cs_regs;
 	if (!cmdbuf || size < maxdwords || !cs_regs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	(void)modifier;
+	if ((modifier & 0xfffffc3f) != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (regs->computepgmhi != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
 
 	uint32_t* startcmd = cmdbuf;
 
@@ -941,10 +954,19 @@ int32_t PS4_SYSV_ABI sceGnmSetCsShaderWithModifier(uint32_t* cmdbuf,
 	    cmdbuf, R_00B830_COMPUTE_PGM_LO, pgmcs, uasize(pgmcs)
 	);
 
-	const uint32_t pgmrsrc[2] = {
-	    regs->computepgmrsrc1, regs->computepgmrsrc2};
+	const uint32_t rsrc1 = modifier == 0
+	    ? regs->computepgmrsrc1
+	    : ((regs->computepgmrsrc1 & 0xfffffc3f) | modifier);
+	const uint32_t pgmrsrc[2] = {rsrc1, regs->computepgmrsrc2};
 	cmdbuf += setpersistentregisterrange(
 	    cmdbuf, R_00B848_COMPUTE_PGM_RSRC1, pgmrsrc, uasize(pgmrsrc)
+	);
+
+	const uint32_t threads[3] = {
+	    regs->computenumthreadx, regs->computenumthready,
+	    regs->computenumthreadz};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B81C_COMPUTE_NUM_THREAD_X, threads, uasize(threads)
 	);
 
 	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
@@ -961,18 +983,31 @@ int32_t PS4_SYSV_ABI sceGnmSetCsShaderWithModifier(uint32_t* cmdbuf,
 int32_t PS4_SYSV_ABI sceGnmSetEsShader(uint32_t* cmdbuf, uint32_t size,
                                        const uint32_t* es_regs,
                                        uint32_t shader_modifier) {
-	const uint32_t maxdwords = 16;
+	const uint32_t maxdwords = 20;
 	const GnmEsStageRegisters* regs = (const GnmEsStageRegisters*)es_regs;
 	if (!cmdbuf || size < maxdwords || !es_regs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	(void)shader_modifier;
+	if (shader_modifier & 0xfcfffc3f) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (regs->spishaderpgmhies != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
 
 	uint32_t* startcmd = cmdbuf;
 
 	const uint32_t pgmes[2] = {regs->spishaderpgmloes, 0};
 	cmdbuf += setpersistentregisterrange(
 	    cmdbuf, R_00B320_SPI_SHADER_PGM_LO_ES, pgmes, uasize(pgmes)
+	);
+
+	const uint32_t rsrc1 = shader_modifier == 0
+	    ? regs->spishaderpgmrsrc1es
+	    : ((regs->spishaderpgmrsrc1es & 0xfcfffc3f) | shader_modifier);
+	const uint32_t pgmrsrc[2] = {rsrc1, regs->spishaderpgmrsrc2es};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B328_SPI_SHADER_PGM_RSRC1_ES, pgmrsrc, uasize(pgmrsrc)
 	);
 
 	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
@@ -988,9 +1023,12 @@ int32_t PS4_SYSV_ABI sceGnmSetEsShader(uint32_t* cmdbuf, uint32_t size,
 
 int32_t PS4_SYSV_ABI sceGnmSetGsShader(uint32_t* cmdbuf, uint32_t size,
                                        const uint32_t* gs_regs) {
-	const uint32_t maxdwords = 25;
+	const uint32_t maxdwords = 29;
 	const GnmGsStageRegisters* regs = (const GnmGsStageRegisters*)gs_regs;
 	if (!cmdbuf || size < maxdwords || !gs_regs) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (regs->spishaderpgmhigs != 0) {
 		return GNM_ERROR_CMD_FAILED;
 	}
 
@@ -999,6 +1037,22 @@ int32_t PS4_SYSV_ABI sceGnmSetGsShader(uint32_t* cmdbuf, uint32_t size,
 	const uint32_t pgmgs[2] = {regs->spishaderpgmlogs, 0};
 	cmdbuf += setpersistentregisterrange(
 	    cmdbuf, R_00B220_SPI_SHADER_PGM_LO_GS, pgmgs, uasize(pgmgs)
+	);
+
+	const uint32_t pgmrsrc[2] = {
+	    regs->spishaderpgmrsrc1gs, regs->spishaderpgmrsrc2gs};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B228_SPI_SHADER_PGM_RSRC1_GS, pgmrsrc, uasize(pgmrsrc)
+	);
+
+	cmdbuf += setcontextregister(
+	    cmdbuf, R_028B94_VGT_STRMOUT_CONFIG, regs->vgtstrmoutconfig
+	);
+	cmdbuf += setcontextregister(
+	    cmdbuf, R_028A6C_VGT_GS_OUT_PRIM_TYPE, regs->vgtgsoutprimtype
+	);
+	cmdbuf += setcontextregister(
+	    cmdbuf, R_028B90_VGT_GS_INSTANCE_CNT, regs->vgtgsinstancecnt
 	);
 
 	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
@@ -1015,18 +1069,38 @@ int32_t PS4_SYSV_ABI sceGnmSetGsShader(uint32_t* cmdbuf, uint32_t size,
 int32_t PS4_SYSV_ABI sceGnmSetHsShader(uint32_t* cmdbuf, uint32_t size,
                                        const uint32_t* hs_regs,
                                        uint32_t param4) {
-	const uint32_t maxdwords = 22;
+	const uint32_t maxdwords = 30;
 	const GnmHsStageRegisters* regs = (const GnmHsStageRegisters*)hs_regs;
 	if (!cmdbuf || size < maxdwords || !hs_regs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	(void)param4;
+	if (regs->spishaderpgmhihs != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
 
 	uint32_t* startcmd = cmdbuf;
 
 	const uint32_t pgmhs[2] = {regs->spishaderpgmlohs, 0};
 	cmdbuf += setpersistentregisterrange(
 	    cmdbuf, R_00B420_SPI_SHADER_PGM_LO_HS, pgmhs, uasize(pgmhs)
+	);
+
+	const uint32_t pgmrsrc[2] = {
+	    regs->spishaderpgmrsrc1hs, regs->spishaderpgmrsrc2hs};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B428_SPI_SHADER_PGM_RSRC1_HS, pgmrsrc, uasize(pgmrsrc)
+	);
+
+	const uint32_t tess[2] = {
+	    regs->vgthosmaxtesslevel, regs->vgthosmintesslevel};
+	cmdbuf += setcontextregisterrange(
+	    cmdbuf, R_028A18_VGT_HOS_MAX_TESS_LEVEL, tess, uasize(tess)
+	);
+	cmdbuf += setcontextregister(
+	    cmdbuf, R_028B6C_VGT_TF_PARAM, regs->vgttfparam
+	);
+	cmdbuf += setcontextregister(
+	    cmdbuf, R_028B58_VGT_LS_HS_CONFIG, param4
 	);
 
 	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
@@ -1043,18 +1117,31 @@ int32_t PS4_SYSV_ABI sceGnmSetHsShader(uint32_t* cmdbuf, uint32_t size,
 int32_t PS4_SYSV_ABI sceGnmSetLsShader(uint32_t* cmdbuf, uint32_t size,
                                        const uint32_t* ls_regs,
                                        uint32_t shader_modifier) {
-	const uint32_t maxdwords = 14;
+	const uint32_t maxdwords = 23;
 	const GnmLsStageRegisters* regs = (const GnmLsStageRegisters*)ls_regs;
 	if (!cmdbuf || size < maxdwords || !ls_regs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	(void)shader_modifier;
+	if (regs->spishaderpgmhils != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
 
 	uint32_t* startcmd = cmdbuf;
 
 	const uint32_t pgmls[2] = {regs->spishaderpgmlols, 0};
 	cmdbuf += setpersistentregisterrange(
 	    cmdbuf, R_00B520_SPI_SHADER_PGM_LO_LS, pgmls, uasize(pgmls)
+	);
+
+	cmdbuf += setpersistentregister(
+	    cmdbuf, R_00B524_SPI_SHADER_PGM_HI_LS, regs->spishaderpgmrsrc2ls
+	);
+
+	const uint32_t rsrc1 = shader_modifier == 0
+	    ? regs->spishaderpgmrsrc1ls
+	    : ((regs->spishaderpgmrsrc1ls & 0xfcfffc3f) | shader_modifier);
+	cmdbuf += setpersistentregister(
+	    cmdbuf, R_00B528_SPI_SHADER_PGM_RSRC1_LS, rsrc1
 	);
 
 	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
@@ -1072,12 +1159,22 @@ int32_t PS4_SYSV_ABI sceGnmSetLsShader(uint32_t* cmdbuf, uint32_t size,
 
 int32_t PS4_SYSV_ABI sceGnmUpdateGsShader(uint32_t* cmdbuf, uint32_t size,
                                           const uint32_t* gs_regs) {
-	/* UpdateGsShader only writes the RSRC registers, not PGM_LO */
-	const uint32_t maxdwords = 5;
+	/* UpdateGsShader writes PGM_LO + RSRC, then NOP-wrapped context reg updates. */
+	const uint32_t maxdwords = 29;
 	const GnmGsStageRegisters* regs = (const GnmGsStageRegisters*)gs_regs;
 	if (!cmdbuf || size < maxdwords || !gs_regs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
+	if (regs->spishaderpgmhigs != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	uint32_t* startcmd = cmdbuf;
+
+	const uint32_t pgmgs[2] = {regs->spishaderpgmlogs, 0};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B220_SPI_SHADER_PGM_LO_GS, pgmgs, uasize(pgmgs)
+	);
 
 	const uint32_t pgmrsrc[2] = {
 	    regs->spishaderpgmrsrc1gs, regs->spishaderpgmrsrc2gs};
@@ -1085,24 +1182,90 @@ int32_t PS4_SYSV_ABI sceGnmUpdateGsShader(uint32_t* cmdbuf, uint32_t size,
 	    cmdbuf, R_00B228_SPI_SHADER_PGM_RSRC1_GS, pgmrsrc, uasize(pgmrsrc)
 	);
 
+	/* NOP-wrapped context register updates (update path uses NOP packets
+	 * with embedded register address, not SET_CONTEXT_REG) */
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e02e5; /* VGT_STRMOUT_CONFIG tag */
+	cmdbuf[2] = regs->vgtstrmoutconfig;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e029b; /* VGT_GS_OUT_PRIM_TYPE tag */
+	cmdbuf[2] = regs->vgtgsoutprimtype;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e02e4; /* VGT_GS_INSTANCE_CNT tag */
+	cmdbuf[2] = regs->vgtgsinstancecnt;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
+	if (remainingdwords) {
+		cmdbuf[0] = PKT3(PKT3_NOP, remainingdwords - 2, 0);
+		for (uint32_t i = 1; i < remainingdwords; i += 1) {
+			cmdbuf[i] = 0;
+		}
+	}
+
 	return GNM_ERROR_OK;
 }
 
 int PS4_SYSV_ABI sceGnmUpdateHsShader(uint32_t* cmdbuf, uint32_t size,
                                       const uint32_t* hs_regs,
                                       uint32_t ls_hs_config) {
-	const uint32_t maxdwords = 5;
+	/* UpdateHsShader writes PGM_LO + RSRC, then NOP-wrapped context reg updates. */
+	const uint32_t maxdwords = 30;
 	const GnmHsStageRegisters* regs = (const GnmHsStageRegisters*)hs_regs;
 	if (!cmdbuf || size < maxdwords || !hs_regs) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	(void)ls_hs_config;
+	if (regs->spishaderpgmhihs != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	uint32_t* startcmd = cmdbuf;
+
+	const uint32_t pgmhs[2] = {regs->spishaderpgmlohs, 0};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B420_SPI_SHADER_PGM_LO_HS, pgmhs, uasize(pgmhs)
+	);
 
 	const uint32_t pgmrsrc[2] = {
 	    regs->spishaderpgmrsrc1hs, regs->spishaderpgmrsrc2hs};
 	cmdbuf += setpersistentregisterrange(
 	    cmdbuf, R_00B428_SPI_SHADER_PGM_RSRC1_HS, pgmrsrc, uasize(pgmrsrc)
 	);
+
+	/* NOP-wrapped context register updates */
+	cmdbuf[0] = PKT3(PKT3_NOP, 3, 0);
+	cmdbuf[1] = 0xc01e0286; /* VGT_HOS_MAX/MIN_TESS_LEVEL tag */
+	cmdbuf[2] = regs->vgthosmaxtesslevel;
+	cmdbuf[3] = regs->vgthosmintesslevel;
+	cmdbuf[4] = 0;
+	cmdbuf += 5;
+
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e02db; /* VGT_TF_PARAM tag */
+	cmdbuf[2] = regs->vgttfparam;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e02d6; /* VGT_LS_HS_CONFIG tag */
+	cmdbuf[2] = ls_hs_config;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
+	if (remainingdwords) {
+		cmdbuf[0] = PKT3(PKT3_NOP, remainingdwords - 2, 0);
+		for (uint32_t i = 1; i < remainingdwords; i += 1) {
+			cmdbuf[i] = 0;
+		}
+	}
 
 	return GNM_ERROR_OK;
 }
@@ -1120,7 +1283,64 @@ int32_t PS4_SYSV_ABI sceGnmUpdatePsShader350(uint32_t* cmdbuf, uint32_t size,
 int32_t PS4_SYSV_ABI sceGnmUpdateVsShader(uint32_t* cmdbuf, uint32_t size,
                                           const uint32_t* vs_regs,
                                           uint32_t shader_modifier) {
-	return sceGnmDriverSetVsShader(cmdbuf, size, vs_regs, shader_modifier);
+	/* UpdateVsShader writes PGM_LO + RSRC, then NOP-wrapped context reg updates.
+	 * Unlike SetVsShader, it uses NOP packets for context registers. */
+	const uint32_t maxdwords = 29;
+	const GnmVsStageRegisters* regs = (const GnmVsStageRegisters*)vs_regs;
+
+	if (!cmdbuf || size < maxdwords || !vs_regs) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (shader_modifier & 0xfcfffc3f) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (regs->spishaderpgmhivs != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	uint32_t* startcmd = cmdbuf;
+
+	const uint32_t pgmvs[2] = {regs->spishaderpgmlovs, 0};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B120_SPI_SHADER_PGM_LO_VS, pgmvs, uasize(pgmvs)
+	);
+
+	const uint32_t rsrc1 = shader_modifier == 0
+	    ? regs->spishaderpgmrsrc1vs
+	    : ((regs->spishaderpgmrsrc1vs & 0xfcfffc3f) | shader_modifier);
+	const uint32_t pgmrsrc[2] = {rsrc1, regs->spishaderpgmrsrc2vs};
+	cmdbuf += setpersistentregisterrange(
+	    cmdbuf, R_00B128_SPI_SHADER_PGM_RSRC1_VS, pgmrsrc, uasize(pgmrsrc)
+	);
+
+	/* NOP-wrapped context register updates */
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e0207; /* PA_CL_VS_OUT_CNTL tag */
+	cmdbuf[2] = regs->paclvsoutcntl;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e01b1; /* SPI_VS_OUT_CONFIG tag */
+	cmdbuf[2] = regs->spivsoutconfig;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	cmdbuf[0] = PKT3(PKT3_NOP, 2, 0);
+	cmdbuf[1] = 0xc01e01c3; /* SPI_SHADER_POS_FORMAT tag */
+	cmdbuf[2] = regs->spishaderposformat;
+	cmdbuf[3] = 0;
+	cmdbuf += 4;
+
+	const uint32_t remainingdwords = maxdwords - (cmdbuf - startcmd);
+	if (remainingdwords) {
+		cmdbuf[0] = PKT3(PKT3_NOP, remainingdwords - 2, 0);
+		for (uint32_t i = 1; i < remainingdwords; i += 1) {
+			cmdbuf[i] = 0;
+		}
+	}
+
+	return GNM_ERROR_OK;
 }
 
 /* --- Init / default hardware state --- */
@@ -1375,13 +1595,14 @@ int PS4_SYSV_ABI sceGnmComputeWaitSemaphore(void) {
 /* --- VGT / wave control --- */
 
 int32_t PS4_SYSV_ABI sceGnmResetVgtControl(uint32_t* cmdbuf, uint32_t size) {
-	if (!cmdbuf || size < 4) {
+	/* Writes IA_MULTI_VGT_PARAM register to default value 0xFF.
+	 * 3 dwords: PKT3 header + reg offset + value. */
+	if (!cmdbuf || size != 3) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	cmdbuf[0] = PKT3(PKT3_SET_CONTEXT_REG, 2, 0);
-	cmdbuf[1] = (R_028B58_VGT_LS_HS_CONFIG - SI_CONTEXT_REG_OFFSET) >> 2;
-	cmdbuf[2] = 0;
-	cmdbuf[3] = 0;
+	cmdbuf[0] = PKT3(PKT3_SET_CONTEXT_REG, 1, 0);
+	cmdbuf[1] = (R_028AA8_IA_MULTI_VGT_PARAM - SI_CONTEXT_REG_OFFSET) >> 2;
+	cmdbuf[2] = 0xff;
 	return GNM_ERROR_OK;
 }
 
@@ -1389,17 +1610,18 @@ int32_t PS4_SYSV_ABI sceGnmSetVgtControl(uint32_t* cmdbuf, uint32_t size,
                                          uint32_t prim_group_sz_minus_one,
                                          uint32_t partial_vs_wave_mode,
                                          uint32_t wd_switch_only_on_eop_mode) {
-	if (!cmdbuf || size < 4) {
+	/* Writes IA_MULTI_VGT_PARAM register.
+	 * 3 dwords: PKT3 header + reg offset + value. */
+	if (!cmdbuf || size != 3 || prim_group_sz_minus_one >= 0x100 ||
+	    (wd_switch_only_on_eop_mode | partial_vs_wave_mode) >= 2) {
 		return GNM_ERROR_CMD_FAILED;
 	}
 	const uint32_t vgtparam =
-	    S_028AA8_PRIMGROUP_SIZE(prim_group_sz_minus_one & 0xffff) |
-	    S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave_mode) |
-	    S_028AA8_SWITCH_ON_EOP(wd_switch_only_on_eop_mode);
+	    ((partial_vs_wave_mode & 1) << 16) |
+	    (prim_group_sz_minus_one & 0xffff);
 	cmdbuf[0] = PKT3(PKT3_SET_CONTEXT_REG, 1, 0);
 	cmdbuf[1] = (R_028AA8_IA_MULTI_VGT_PARAM - SI_CONTEXT_REG_OFFSET) >> 2;
 	cmdbuf[2] = vgtparam;
-	cmdbuf[3] = 0;
 	return GNM_ERROR_OK;
 }
 
