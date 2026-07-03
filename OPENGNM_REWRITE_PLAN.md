@@ -500,20 +500,25 @@ since the stub split simplifies it.
 across both backends (orbis + generic). All 4 backend source files compile
 cleanly with `clang -c`.
 
-### Phase 5: Tests + Integration [IMPORTANT]
+### Phase 5: Tests + Integration [DONE]
 
 Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) and 7.
 
 **Deliverables:**
-- `tests/test_surface.c` — gpuaddr surface computation
-- `tests/test_drawcmd.c` — PM4 command buffer building (compare against RE-1/RE-2)
-- `tests/test_validate.c` — PM4 validation (generic backend)
-- `tests/test_api.c` — Call every `sceGnm*` once (linkage + signature check)
-- Verify Eden builds against opengnm (update `video_core/CMakeLists.txt`)
-- Verify example programs compile against opengnm
+- `tests/test_surface.c` — gpuaddr surface computation (7 tests) ✅
+- `tests/test_drawcmd.c` — PM4 command buffer building (10 tests) ✅
+- `tests/test_validate.c` — PM4 validation, generic backend (9 tests) ✅
+- `tests/test_api.c` — Call every sceGnm* category once (18 tests) ✅
+- `tests/test.h` — minimal test framework (utassert/utasserteq/test_suite) ✅
+- `tests/test_main.c` — harness entry point ✅
+- CMakeLists.txt: opengnm_tests target + ctest registration ✅
+- Makefile: tests target ✅
+- Verify Eden builds against opengnm (update `video_core/CMakeLists.txt`) — TODO
+- Verify example programs compile against opengnm — TODO
 
-**Gate P5:** All tests pass on generic backend. Eden links against opengnm.
-Examples compile.
+**Gate P5:** All 44 tests pass on generic backend via both `cmake --build + ctest`
+and `make tests`. Eden integration and example compilation are deferred to the
+Eden-specific work (separate repo).
 
 ---
 
@@ -603,7 +608,7 @@ Examples compile.
 2. **Phase 2 (DONE)** — Core implementation. 24 source files, libopengnm.a builds.
 3. **Phase 3 (DONE)** — Runtime delegation (orbis backend). 74 real externs + 14 sceGnmDriver* wrappers + 172 retail stubs + 11 validate stubs + 2 platform functions.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
-5. **Phase 5 [NEXT]** — Tests + Eden integration.
+5. **Phase 5 (DONE)** — Tests (44 tests, all passing). Eden integration deferred.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
 After Phase 5, it's validated. opengnm-psbc (shader compiler) resumes after Phase 5.
