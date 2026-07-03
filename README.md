@@ -11,16 +11,37 @@ against opengnm unmodified.
 - **Full `sceGnm*` API surface** — 207 functions matching the Sony SDK ABI
 - **OpenOrbis SDK compatible** — builds with the OpenOrbis PS4 toolchain
 - **Two backends:**
-  - `orbis` — delegates to the official `libSceGnmDriver` firmware
-  - `generic` — pure software PM4 emission for host testing (no PS4 needed)
+  - `orbis` — delegates to the official `libSceGnmDriver` firmware (74 real
+    externs + 14 `sceGnmDriver*` forwarding wrappers + 172 retail stubs +
+    11 validate stubs)
+  - `generic` — pure software PM4 emission for host testing (no PS4 needed,
+    14 PM4 packet builders + real `sceGnm*` + 172 stubs + 11 validate stubs)
 - **Binary-compatible struct layouts** — `_Static_assert` verified sizes
 - **Surface computation** — `sceGpa*` (gpuaddr / AddrLib) for RT/texture sizing
+- **GCN assembler** — fetch shader generation
+- **PM4 encoding** — command buffer packet building
 
 ## Status
 
-Work in progress. See `OPENGNM_REWRITE_PLAN.md` for the full plan.
+Phases 1-4 complete. All 207+ `sceGnm*` functions implemented across both
+backends. Generic build compiles with zero warnings (`-Wall -Wextra -Wpedantic`).
+See `OPENGNM_REWRITE_PLAN.md` for the full plan and progress.
 
 ## Building
+
+### Host (generic, for testing)
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DOPENGNM_PLATFORM=generic
+cmake --build build
+```
+
+Or with Make:
+
+```sh
+cp config.generic.mak config.mak
+make
+```
 
 ### PS4 (OpenOrbis)
 
@@ -29,14 +50,6 @@ export OO_PS4_TOOLCHAIN=/path/to/openorbis
 cp config.orbis.mak config.mak
 make
 make install DESTDIR=$OO_PS4_TOOLCHAIN
-```
-
-### Host (generic, for testing)
-
-```sh
-cp config.generic.mak config.mak
-make tests
-./testgnm
 ```
 
 ### Docker
