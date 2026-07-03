@@ -21,6 +21,13 @@ testgnm
 opengnm_tests
 opengnm_link_smoke.elf
 opengnm_hw_smoke.elf
+opengnm_hw_smoke
+*.oelf
+*.pkg
+eboot.bin
+pkg.gp4
+sce_module/
+sce_sys/
 surf.bin
 test.png
 

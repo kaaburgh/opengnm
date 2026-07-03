@@ -23,14 +23,17 @@ against opengnm unmodified.
 
 ## Status
 
-Phases 1-4 and Phase 5A are complete. Phase 5B is in progress: the OpenOrbis
-Docker build, PS4-target link smoke, and PS4 hardware-smoke ELF build now pass.
-All 207+ `sceGnm*` functions are implemented across both backends, and the
-generic host backend passes 50 tests via CMake/CTest and Makefile.
+Phases 1-4, Phase 5A, and Phase 5B are complete. The OpenOrbis Docker build,
+PS4-target link smoke, PS4 hardware-smoke package build, FTP staging, and PS4
+hardware run all pass. All 207+ `sceGnm*` functions are implemented across both
+backends, and the generic host backend passes 50 tests via CMake/CTest and
+Makefile.
 
-Remaining validation is PS4 hardware smoke testing. Eden and `freegnm-examples`
-currently consume the older `gnm*` wrapper API from `freegnm`, so using them with
-opengnm requires a separate migration or adapter layer.
+The verified PS4 hardware smoke result is a full-screen green status view with
+scrolling white bar and digit `0`, confirming VideoOut presentation and the GNM
+submit/EOP path. Eden and `freegnm-examples` currently consume the older `gnm*`
+wrapper API from `freegnm`, so using them with opengnm requires a separate
+migration or adapter layer.
 
 See `OPENGNM_REWRITE_PLAN.md` for the full plan and progress.
 
@@ -65,6 +68,8 @@ make install DESTDIR=$OO_PS4_TOOLCHAIN
 ./build.sh docker-build          # OpenOrbis build + link/hardware-smoke ELFs
 ./build.sh docker-link-smoke     # PS4-target link smoke only
 ./build.sh docker-hardware-smoke # PS4 hardware-smoke ELF only
+./build.sh docker-hardware-pkg   # PS4 hardware-smoke package
+./build.sh stage-hardware-pkg    # build/upload package to the configured PS4
 ./build.sh tests                 # build + run host tests
 ```
 

@@ -14,10 +14,12 @@ The current `opengnm` build can produce:
   direct memory, builds a small draw command buffer, submits it through
   `sceGnmSubmitCommandBuffers`, calls `sceGnmSubmitDone`, and waits for an EOP
   label write.
+- `IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg`: an installable package wrapping
+  the smoke executable as title id `OGNM00001`.
 
-The ELF build is not enough for normal PS4 install/launch. A package build must
-wrap the ELF as `eboot.bin`, generate `sce_sys/param.sfo`, create `pkg.gp4`, and
-build a `.pkg`.
+The current hardware result, observed on 2026-07-03, is a full-screen green
+status view with a scrolling white bar at the top and a large digit `0`. That
+means VideoOut is presenting and the GNM submit/EOP path completed.
 
 ## Target Configuration Found
 
@@ -89,7 +91,7 @@ The packaging flow is:
 7. Build the final `.pkg` with `PkgTool.Core pkg_build`.
 8. Validate the package with `PkgTool.Core pkg_validate`.
 
-## Proposed opengnm Hardware Smoke Metadata
+## opengnm Hardware Smoke Metadata
 
 Use a new title id/content id so it does not collide with `freegnm-examples`.
 
@@ -97,7 +99,7 @@ Use a new title id/content id so it does not collide with `freegnm-examples`.
 TITLE=opengnm Hardware Smoke
 VERSION=1.00
 TITLE_ID=OGNM00001
-CONTENT_ID=IV0000-OGNM00001_00-HARDWARESMOKE00
+CONTENT_ID=IV0000-OGNM00001_00-OPENGNMHWSMOKE00
 EXE=opengnm_hw_smoke
 PKG=$(CONTENT_ID).pkg
 ```
@@ -164,7 +166,7 @@ PkgTool.Core sfo_setentry sce_sys/param.sfo APP_TYPE --type Integer --maxsize 4 
 PkgTool.Core sfo_setentry sce_sys/param.sfo APP_VER --type Utf8 --maxsize 8 --value "1.00"
 PkgTool.Core sfo_setentry sce_sys/param.sfo ATTRIBUTE --type Integer --maxsize 4 --value 0
 PkgTool.Core sfo_setentry sce_sys/param.sfo CATEGORY --type Utf8 --maxsize 4 --value "gd"
-PkgTool.Core sfo_setentry sce_sys/param.sfo CONTENT_ID --type Utf8 --maxsize 48 --value "IV0000-OGNM00001_00-HARDWARESMOKE00"
+PkgTool.Core sfo_setentry sce_sys/param.sfo CONTENT_ID --type Utf8 --maxsize 48 --value "IV0000-OGNM00001_00-OPENGNMHWSMOKE00"
 PkgTool.Core sfo_setentry sce_sys/param.sfo DOWNLOAD_DATA_SIZE --type Integer --maxsize 4 --value 0
 PkgTool.Core sfo_setentry sce_sys/param.sfo SYSTEM_VER --type Integer --maxsize 4 --value 0
 PkgTool.Core sfo_setentry sce_sys/param.sfo TITLE --type Utf8 --maxsize 128 --value "opengnm Hardware Smoke"
@@ -179,11 +181,11 @@ PKG_FILES="eboot.bin sce_sys/about/right.sprx sce_sys/param.sfo sce_sys/icon0.pn
 
 create-gp4 \
   -out=pkg.gp4 \
-  -content-id=IV0000-OGNM00001_00-HARDWARESMOKE00 \
+  -content-id=IV0000-OGNM00001_00-OPENGNMHWSMOKE00 \
   -files "$PKG_FILES"
 
 PkgTool.Core pkg_build pkg.gp4 .
-PkgTool.Core pkg_validate --verbose IV0000-OGNM00001_00-HARDWARESMOKE00.pkg
+PkgTool.Core pkg_validate --verbose IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg
 ```
 
 ## Docker Wrapper Shape
@@ -211,7 +213,7 @@ Upload by FTP:
 
 ```sh
 ROOT_DIR=/Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm
-PKG="$ROOT_DIR/opengnm/IV0000-OGNM00001_00-HARDWARESMOKE00.pkg"
+PKG="$ROOT_DIR/opengnm/IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg"
 PS4_HOST="${PS4_HOST:-10.0.1.157}"
 PS4_FTP_PORT="${PS4_FTP_PORT:-2121}"
 PS4_PKG_DIR="${PS4_PKG_DIR:-/data/pkg}"
@@ -246,7 +248,7 @@ PY
 
 After staging:
 
-1. Install `IV0000-OGNM00001_00-HARDWARESMOKE00.pkg` from the PS4 package
+1. Install `IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg` from the PS4 package
    installer.
 2. Launch title id `OGNM00001`.
 3. Watch for the console app output:
@@ -275,8 +277,19 @@ Success:
 - Package uploads to `ftp://10.0.1.157:2121/data/pkg/`.
 - Package installs.
 - Title `OGNM00001` launches.
-- The smoke executable exits after writing and observing the EOP label.
-- The app prints `opengnm hardware smoke passed`.
+- The smoke executable stays on a full-screen green status view.
+- The scrolling white bar at the top keeps moving.
+- The large center digit is `0`, meaning the EOP label was written after
+  `sceGnmSubmitCommandBuffers` and `sceGnmSubmitDone`.
+- The app logs `opengnm hardware smoke passed`.
+
+Failure status digits:
+
+- `1`: GNM direct-memory allocation failed.
+- `2`: `sceGnmSubmitCommandBuffers` failed.
+- `3`: `sceGnmSubmitDone` failed.
+- `4`: EOP label timeout.
+- `5`: GNM direct-memory map failed.
 
 Failure modes to record:
 
@@ -308,4 +321,3 @@ Do not commit:
 - Generated `pkg.gp4`
 - Generated `sce_sys/param.sfo`
 - Copied runtime `.prx` files
-
