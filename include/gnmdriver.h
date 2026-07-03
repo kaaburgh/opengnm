@@ -423,8 +423,8 @@ int PS4_SYSV_ABI sceGnmGetPhysicalCounterFromVirtualized(void);
 uint32_t PS4_SYSV_ABI sceGnmGetProtectionFaultTimeStamp(void);
 int PS4_SYSV_ABI sceGnmGetShaderProgramBaseAddress(void);
 int PS4_SYSV_ABI sceGnmGetShaderStatus(void);
-uintptr_t PS4_SYSV_ABI
-sceGnmGetTheTessellationFactorRingBufferBaseAddress(void);
+uintptr_t
+sceGnmGetTheTessellationFactorRingBufferBaseAddress(void) PS4_SYSV_ABI;
 int PS4_SYSV_ABI sceGnmIsCoredumpValid(void);
 int PS4_SYSV_ABI sceGnmRaiseUserExceptionEvent(void);
 
@@ -516,5 +516,68 @@ int PS4_SYSV_ABI Func_81037019ECCD0E01(void);
 int PS4_SYSV_ABI Func_BFB41C057478F0BF(void);
 int PS4_SYSV_ABI Func_E51D44DB8151238C(void);
 int PS4_SYSV_ABI Func_F916890425496553(void);
+
+/* =========================================================================
+ *  Internal PM4 packet builder wrappers (sceGnmDriver*)
+ *
+ *  These are the packet-building functions that drawcommandbuffer.c calls.
+ *  On orbis, they delegate to the firmware's sceGnm* functions.
+ *  On generic, they emit PM4 packets directly.
+ *  These match the original driver.h API surface.
+ * ========================================================================= */
+int32_t sceGnmDriverDrawInitDefaultHardwareState350(
+    uint32_t* cmd, uint32_t numdwords
+);
+int32_t sceGnmDriverDrawIndex(
+    uint32_t* cmd, uint32_t numdwords, uint32_t indexcount,
+    const void* indexaddr, SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverDrawIndexAuto(
+    uint32_t* cmd, uint32_t numdwords, uint32_t indexcount,
+    SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverDrawIndexIndirect(
+    uint32_t* cmd, uint32_t numdwords, uint32_t dataoffset, uint32_t stage,
+    uint8_t vertexoffusgpr, uint8_t instanceoffusgpr, SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverDrawIndirect(
+    uint32_t* cmd, uint32_t numdwords, uint32_t dataoffset, uint32_t stage,
+    uint8_t vertexoffusgpr, uint8_t instanceoffusgpr, SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverDrawIndexIndirectMulti(
+    uint32_t* cmd, uint32_t numdwords, uint32_t dataoffset, uint32_t maxcount,
+    uint32_t stage, uint8_t vertexoffusgpr, uint8_t instanceoffusgpr,
+    SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverDrawIndirectMulti(
+    uint32_t* cmd, uint32_t numdwords, uint32_t dataoffset, uint32_t maxcount,
+    uint32_t stage, uint8_t vertexoffusgpr, uint8_t instanceoffusgpr,
+    SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverDrawIndexIndirectCountMulti(
+    uint32_t* cmd, uint32_t numdwords, uint32_t dataoffset, uint32_t maxcount,
+    uint64_t countaddr, uint32_t stage, uint8_t vertexoffusgpr,
+    uint8_t instanceoffusgpr, SceGnmDrawFlags flags
+);
+int32_t sceGnmDriverSetVsShader(
+    uint32_t* cmd, uint32_t numdwords, const void* vsregs,
+    uint32_t shadermodifier
+);
+int32_t sceGnmDriverSetPsShader(
+    uint32_t* cmd, uint32_t numdwords, const void* psregs
+);
+int32_t sceGnmDriverSetPsShader350(
+    uint32_t* cmd, uint32_t numdwords, const void* psregs
+);
+int32_t sceGnmDriverSetEmbeddedVsShader(
+    uint32_t* cmd, uint32_t numdwords, int32_t shaderid, uint32_t shadermodifier
+);
+int32_t sceGnmDriverSetEmbeddedPsShader(
+    uint32_t* cmd, uint32_t numdwords, int32_t shaderid
+);
+int32_t sceGnmDriverInsertWaitFlipDone(
+    uint32_t* cmd, uint32_t numdwords, int32_t videohandle,
+    uint32_t displaybufidx
+);
 
 #endif /* _GNM_DRIVER_H_ */

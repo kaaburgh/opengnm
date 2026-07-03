@@ -6,10 +6,16 @@
 
 /*
  * PS4 System V calling convention.
- * On x86_64 this is the default, but we declare it explicitly to match
- * the Sony SDK header convention and document intent.
+ * On x86_64 (both PS4 and host) this is the default, so the attribute
+ * is a no-op. We keep the macro for Sony SDK header compatibility and
+ * documentation. If opengnm is ever ported to a non-x86_64 target,
+ * define OPENGNM_REQUIRE_ABI to enable the actual attribute.
  */
+#ifdef OPENGNM_REQUIRE_ABI
 #define PS4_SYSV_ABI __attribute__((sysv_abi))
+#else
+#define PS4_SYSV_ABI
+#endif
 
 /* Alignment constants */
 #define GNM_INDIRECT_BUFFER_MAX_BYTESIZE 0x3ffffc

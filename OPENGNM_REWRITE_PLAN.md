@@ -313,6 +313,11 @@ move to a separate `opengnm-tools/` repo. The library keeps only what it needs: 
 assembler (fetch shaders), gpuaddr, PM4 encoding. GNF/FNF/PSSL decoder code goes with
 the tools.
 
+**Shader compiler split out:** The SPIR-V to PS4 Shader Binary compiler is in a
+separate `opengnm-psbc/` repo, built on Mesa 26.2.0 (NIR + ACO). It consumes
+opengnm's headers for the `GnmShaderFileHeader` / `GnmVsShader` / `GnmPsShader`
+binary container format. See `opengnm-psbc/OPENGNM_PSBC_PLAN.md`.
+
 ---
 
 ## Phases

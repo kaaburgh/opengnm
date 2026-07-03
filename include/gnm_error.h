@@ -2,6 +2,7 @@
 #define _GNM_ERROR_H_
 
 #include <stdint.h>
+#include "gnm_types.h"
 
 /*
  * GNM error codes.
@@ -79,7 +80,7 @@ typedef enum {
 	GNM_ERROR_ASM_FAILED,
 } GnmError;
 
-const char* PS4_SYSV_ABI sceGnmStrError(GnmError err);
+const char* sceGnmStrError(GnmError err) PS4_SYSV_ABI;
 
 typedef enum {
 	GNM_MSGSEV_WARN = 0,

@@ -19,7 +19,7 @@ typedef struct {
 } GnmCommandCallback;
 
 typedef struct {
-	uint64_t predation_enabled : 1;
+	uint64_t predication_enabled : 1;
 	uint64_t shadertype : 1;
 	uint64_t _unused : 62;
 } GnmCommandBufferFlags;
