@@ -413,107 +413,81 @@ The foundation — all public headers with correct Sony SDK signatures.
 **Gate P1 (PASSED):** Headers compile cleanly. `_Static_assert` sizes verified.
 `#include <gnm.h>` compiles on host + orbis targets. 207 `sceGnm*` declared.
 
-### Phase 2: Core Implementation [CRITICAL]
+### Phase 2: Core Implementation [DONE]
 
-Command buffer building, resource setup, shader helpers. Implement against RE docs.
+Command buffer building, resource setup, shader helpers. 24 source files, ~21,683 LOC.
 
-**Deliverables:**
-- `src/drawcommandbuffer.c` — All `sceGnmDrawCmd*` functions. Emit PM4 packets per
-  RE-1/RE-2 (exact opcodes, counts, validation from `tools/gnm_driver_fw900_analysis.md`).
-- `src/rendertarget.c` / `depthrendertarget.c` — RT creation/sizing/address.
-- `src/texture.c` — Texture creation/sizing/address.
-- `src/shader.c` — Fetch shader generation (uses GCN assembler).
-- `src/dataformat.c` — Format utils.
-- `src/commandbuffer.c` — Cmd buffer init/reset.
-- `src/error.c` — `sceGnmStrError`.
-- `src/gpuaddr/` — Port 4,164 LOC AddrLib (AMD PAL math). Rename to `sceGpa*`.
-- `src/gcn/` — Port GCN assembler (internal, `opengnm_gcn_*` prefix).
-- `src/pm4/` — Port PM4 encoding helpers.
+**Deliverables (ALL COMPLETE):**
+- `src/drawcommandbuffer.c` — 60 `sceGnmDrawCmd*` PM4 emission functions (1,939 LOC)
+- `src/rendertarget.c` / `depthrendertarget.c` — RT/DRT creation/sizing/address
+- `src/texture.c` — Texture creation/sizing/address
+- `src/shader.c` — Fetch shader generation (uses GCN assembler)
+- `src/dataformat.c` — Format utils
+- `src/commandbuffer.c` — Cmd buffer init/reset/alloc
+- `src/error.c` — `sceGnmStrError`, message handler
+- `src/gpuaddr/` — 6 files, 4,164 LOC AddrLib (AMD PAL math), `sceGpa*` naming
+- `src/gcn/` — 6 files, GCN assembler (internal)
+- `src/pm4/` — 4 files, PM4 encoding (internal)
+- `src/u/` + `src/deps/` — Utility headers + bcdec
 
-**Gate P2:** `sceGnmDrawCmd*` produce PM4 matching RE-1/RE-2 byte layouts.
-`sceGpaComputeSurfaceInfo` matches reference output. Tests pass.
+**Gate P2 (PASSED):** All 24 `.c` files compile with zero errors. CMake builds
+`libopengnm.a` successfully (generic backend).
 
-### Phase 3: Runtime Delegation (orbis backend) [CRITICAL]
+### Phase 3: Runtime Delegation (orbis backend) [CRITICAL — NEXT]
 
-Thin wrappers delegating to PS4 firmware `libSceGnmDriver.sprx`.
+Thin wrappers delegating to PS4 firmware `libSceGnmDriver.sprx`. Per RE findings,
+only ~85 functions have real firmware implementations; ~122 are error stubs.
 
 **Deliverables:**
 - `src/driver_orbis.c` — All runtime `sceGnm*`:
-  - Draw/Dispatch/Shader-set/Shader-update/Submit/Init/SDMA/Compute-queue/
-    VGT/Wave/Misc — forward to firmware via proper-signature externs (NOT
-    OpenOrbis's `void func()` stubs).
-  - Firmware extern declarations inline (matching RE signatures from RE-1 to RE-4).
+  - **~85 real functions** (Draw/Dispatch/Shader-set/Shader-update/Submit/Init/
+    Compute-queue/VGT/Wave) — forward to firmware via proper-signature externs
+    (NOT OpenOrbis's `void func()` stubs). Firmware extern declarations inline.
+  - **~122 stub functions** (SDMA/Resource/Workload/EQ/Sqtt/Spm/Debugger/Markers/
+    Coredump/DriverInternal/LogicalCu/MipStats) — return
+    `ORBIS_GNM_ERROR_VALIDATION_NOT_ENABLED` (matching RE-7/8/9 findings that
+    these are stubs on retail firmware).
+  - **11 validate functions** — return 0 (matching RE-3: firmware validate stubs
+    also return 0).
 - `src/platform_orbis.c` — `sceGnmGpuMode` (BASE/NEO via `sceKernelIsNeoMode`),
   `sceGnmPlatGetBufferLabelAddress` (via `sceVideoOutGetBufferLabelAddress`).
   Declare externs inline (avoid OpenOrbis incomplete headers).
 
-**Gate P3:** opengnm orbis build links `-lkernel -lSceGnmDriver`. Trivial draw+submit
-compiles and links. No dependency on `orbis/_types/gnm.h`.
+**Gate P3:** opengnm orbis build links `-lkernel -lSceGnmDriver`. All 207
+`sceGnm*` functions have implementations (real or stub). No dependency on
+`orbis/_types/gnm.h`.
 
-### Phase 4: Validation + Resource Registration + Workload [IMPORTANT]
+### Phase 4: Generic Backend (host testing) [IMPORTANT]
 
-New functionality. Validation is stubs per RE-3 (firmware stubs them too).
-
-**Deliverables:**
-- `src/validate.c` — `sceGnmValidate*` (11 functions). Orbis: forward to firmware
-  (which returns 0 per RE-3). Generic: PM4 packet validation (walk packets, check
-  headers/sizes).
-- `src/resource.c` — `sceGnmRegisterOwner`/`Resource`/`FindResources`/`GetResource*`
-  (19 functions). Orbis: forward. Generic: in-memory registry.
-- `src/workload.c` — `sceGnmBeginWorkload`/`EndWorkload`/`CreateWorkloadStream`/
-  `DingDong`/`AreSubmitsAllowed` (8 functions). Orbis: forward. Generic: minimal
-  tracking.
-
-**Gate P4:** Validation returns 0 on orbis (matching RE-3). Generic validation
-detects malformed PM4. Resource registration tracks allocations.
-
-### Phase 5: Generic Backend (host testing) [IMPORTANT]
-
-Full software implementation for testing without a PS4.
+Software implementation for testing without a PS4. Merged with former Phase 5
+since the stub split simplifies it.
 
 **Deliverables:**
 - `src/driver_generic.c` — All runtime `sceGnm*` in software:
-  - Draw/dispatch: emit PM4 into command buffer (per RE-1/RE-2)
-  - Submit: validate PM4 via decoder, log malformed, return OK
-  - Shader set: emit `SET_SH_REG` PM4 (per RE-2)
-  - SDMA: emit DMA PM4
-  - Init: default hardware state PM4 blob (per RE-5 when complete; use RE'd MMIO
-    sequence as reference)
-  - Compute queue/workload/resource/validate: in-memory stubs
+  - **~85 real functions**: emit PM4 into command buffer (per RE-1/RE-2),
+    submit validates PM4 via decoder, init copies RE-5 PM4 blob
+  - **~122 stub functions**: return `ORBIS_GNM_ERROR_VALIDATION_NOT_ENABLED`
+  - **11 validate functions**: PM4 packet validation (walk packets, check
+    headers/sizes) — real implementation for host testing
 - `src/platform_generic.c` — `sceGnmGpuMode` returns `GNM_GPU_BASE`,
   `sceGnmPlatGetBufferLabelAddress` returns malloc'd label.
 
-**Gate P5:** Generic build compiles without PS4 SDK. All tests pass. PM4 output
-validated by decoder against RE-1/RE-2 byte layouts.
+**Gate P4:** Generic build compiles without PS4 SDK. All 207 `sceGnm*` link.
+PM4 output validated against RE-1/RE-2 byte layouts.
 
-### Phase 6: Debugger/Profiler Stubs [LOW]
+### Phase 5: Tests + Integration [IMPORTANT]
 
-Headers match Sony SDK; implementations are no-ops. Signatures from RE-8 when
-available, otherwise from shadPS4.
-
-**Deliverables:**
-- `src/debugprof.c` — All `sceGnmSqtt*` (~25), `sceGnmSpm*` (~12),
-  `sceGnmDebugger*` (~10), `sceGnmGpuPaDebug*`, `sceGnmDebugHardwareStatus`, marker
-  functions, coredump functions, `DriverInternalRetrieveGnmInterface*` (7),
-  `LogicalCu*` (3), misc getters (~70 functions). Return
-  `ORBIS_GNM_ERROR_VALIDATION_NOT_ENABLED` or appropriate error. Orbis: forward
-  lightweight ones to firmware.
-
-**Gate P6:** All 207 `sceGnm*` have implementations (real or stub). Full header
-surface compiles. A test calling every function links and runs without crashing.
-
-### Phase 7: Test Porting + Integration [IMPORTANT]
+Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) and 7.
 
 **Deliverables:**
-- Port test suite — write tests against `sceGnm*` API, validate against RE docs.
-- `tests/test_surface.c` — gpuaddr surface computation.
-- `tests/test_drawcmd.c` — PM4 command buffer building (compare against RE-1/RE-2).
-- `tests/test_validate.c` — PM4 validation (generic backend).
-- `tests/test_api.c` — Call every `sceGnm*` once (linkage + signature check).
-- Verify Eden builds against opengnm (update `video_core/CMakeLists.txt`).
-- Verify example programs compile against opengnm.
+- `tests/test_surface.c` — gpuaddr surface computation
+- `tests/test_drawcmd.c` — PM4 command buffer building (compare against RE-1/RE-2)
+- `tests/test_validate.c` — PM4 validation (generic backend)
+- `tests/test_api.c` — Call every `sceGnm*` once (linkage + signature check)
+- Verify Eden builds against opengnm (update `video_core/CMakeLists.txt`)
+- Verify example programs compile against opengnm
 
-**Gate P7:** All tests pass on generic backend. Eden links against opengnm.
+**Gate P5:** All tests pass on generic backend. Eden links against opengnm.
 Examples compile.
 
 ---
@@ -528,7 +502,9 @@ Examples compile.
 2. **`sceGnm*` naming throughout.** All public functions use `sceGnm*` / `sceGpa*`.
    Internal helpers use `opengnm_*` prefix.
 
-3. **`PS4_SYSV_ABI` on all declarations.** `__attribute__((sysv_abi))`.
+3. **`PS4_SYSV_ABI` on all declarations.** No-op on x86_64 (sysv is default).
+   Enabled via `OPENGNM_REQUIRE_ABI` for non-x86_64 targets. Matches Sony SDK
+   convention and documents intent.
 
 4. **Binary-compatible struct layouts.** All `Gnm*` struct sizes preserved via
    `_Static_assert`.
@@ -554,28 +530,28 @@ Examples compile.
 
 | Category | Count | Phase | RE Status | Notes |
 |----------|-------|-------|-----------|-------|
-| Draw (DrawIndex/Auto/Indirect/Multi/Offset) | 12 | 2-3 | RE-1 DONE | Core, PM4 RE'd |
-| Dispatch (Direct/Indirect/OnMec/Init) | 4 | 2-3 | RE-1 DONE | Core, PM4 RE'd |
-| Shader set (Vs/Ps/Ps350/Cs/CsMod/Gs/Es/Hs/Ls/Embedded) | 11 | 2-3 | RE-2 DONE | Core, PM4 RE'd |
-| Shader update (Vs/Ps/Ps350/Gs/Hs) | 5 | 3 | RE-2 DONE | Forward to firmware |
-| Submit (CommandBuffers/AndFlip/ForWorkload/Done/RequestFlip) | 7 | 3 | RE-4 DONE | Forward to firmware |
-| Init (DefaultHardwareState 175/200/350/ContextState 400) | 6 | 2-3 | RE-5 DONE | PM4 blob needs RE |
-| SDMA (Open/Close/CopyLinear/CopyTiled/CopyWindow/ConstFill/Flush/GetMinCmd) | 8 | 3 | RE-7 DONE (stubs) | Forward to firmware |
-| Compute queue (Map/MapPriority/Unmap/TessRing/GsRing) | 5 | 3 | — | Forward to firmware |
-| VGT/Wave (SetVgtControl/Reset/WaveLimit*) | 4 | 3 | — | Forward to firmware |
-| Validate (Validate*/GetDiagnostics/Disable/Reset/Register) | 11 | 4 | RE-3 DONE | Stubs (firmware stubs too) |
-| Resource (RegisterOwner/Resource/Find/Get/Set/Unregister) | 19 | 4 | RE-9 DONE (stubs) | New |
-| Workload (Begin/End/Create/Destroy/DingDong/AreSubmits) | 8 | 4 | — | New |
-| EQ (AddEqEvent/Delete/GetEventType/GetTimeStamp) | 4 | 4 | — | Forward to firmware |
-| Sqtt (trace buffer profiling) | 25 | 6 | RE-8 DONE (stubs) | Stubs |
-| Spm (performance counters) | 12 | 6 | RE-8 DONE (stubs) | Stubs |
-| Debugger (GetAddressWatch/Halt/Read/Write/Resume) | 10 | 6 | RE-8 DONE (stubs) | Stubs |
-| Markers (Push/Pop/Color/Set/ThreadTrace) | 6 | 6 | — | Stubs |
-| Coredump/Misc (GetCoredump*/GetDebugTimestamp/GetLastWaited) | 8 | 6 | — | Stubs |
-| DriverInternal (RetrieveGnmInterface* 7 variants/VirtualQuery/TriggerCapture) | 10 | 6 | — | Stubs |
-| LogicalCu/GpuPa (CuIndex/Mask/Tca/Physical) | 5 | 6 | — | Stubs |
-| MipStats (Setup/Disable/RequestAndReset) | 3 | 6 | — | Stubs |
-| Misc (FlushGarlic/GetGpuCoreClock/GetNumTca/GetOffChipTess/IsUserPa/PaHeartbeat) | 14 | 6 | — | Stubs |
+| Draw (DrawIndex/Auto/Indirect/Multi/Offset) | 12 | 2-3 (DONE) | RE-1 DONE | Core, PM4 RE'd |
+| Dispatch (Direct/Indirect/OnMec/Init) | 3 (stub) | 2-3 (DONE) | RE-1 DONE | Core, PM4 RE'd |
+| Shader set (Vs/Ps/Ps350/Cs/CsMod/Gs/Es/Hs/Ls/Embedded) | 11 | 2-3 (DONE) | RE-2 DONE | Core, PM4 RE'd |
+| Shader update (Vs/Ps/Ps350/Gs/Hs) | 5 | 3 (NEXT) | RE-2 DONE | Forward to firmware |
+| Submit (CommandBuffers/AndFlip/ForWorkload/Done/RequestFlip) | 7 | 3 (NEXT) | RE-4 DONE | Forward to firmware |
+| Init (DefaultHardwareState 175/200/350/ContextState 400) | 3 (stub) | 2-3 (DONE) | RE-5 DONE | PM4 blob needs RE |
+| SDMA (Open/Close/CopyLinear/CopyTiled/CopyWindow/ConstFill/Flush/GetMinCmd) | 8 | 3 (NEXT) | RE-7 DONE (stubs) | Forward to firmware |
+| Compute queue (Map/MapPriority/Unmap/TessRing/GsRing) | 5 | 3 (NEXT) | — | Forward to firmware |
+| VGT/Wave (SetVgtControl/Reset/WaveLimit*) | 3 (stub) | 3 (NEXT) | — | Forward to firmware |
+| Validate (Validate*/GetDiagnostics/Disable/Reset/Register) | 11 | 3 (stub) | RE-3 DONE | Stubs (firmware stubs too) |
+| Resource (RegisterOwner/Resource/Find/Get/Set/Unregister) | 19 | 3 (stub) | RE-9 DONE (stubs) | New |
+| Workload (Begin/End/Create/Destroy/DingDong/AreSubmits) | 8 | 3 (stub) | — | New |
+| EQ (AddEqEvent/Delete/GetEventType/GetTimeStamp) | 3 (stub) | 4 | — | Forward to firmware |
+| Sqtt (trace buffer profiling) | 25 | 3 (stub) | RE-8 DONE (stubs) | Stubs |
+| Spm (performance counters) | 12 | 3 (stub) | RE-8 DONE (stubs) | Stubs |
+| Debugger (GetAddressWatch/Halt/Read/Write/Resume) | 10 | 3 (stub) | RE-8 DONE (stubs) | Stubs |
+| Markers (Push/Pop/Color/Set/ThreadTrace) | 3 (stub) | 6 | — | Stubs |
+| Coredump/Misc (GetCoredump*/GetDebugTimestamp/GetLastWaited) | 8 | 3 (stub) | — | Stubs |
+| DriverInternal (RetrieveGnmInterface* 7 variants/VirtualQuery/TriggerCapture) | 10 | 3 (stub) | — | Stubs |
+| LogicalCu/GpuPa (CuIndex/Mask/Tca/Physical) | 5 | 3 (stub) | — | Stubs |
+| MipStats (Setup/Disable/RequestAndReset) | 3 (NEXT) | 3 (stub) | — | Stubs |
+| Misc (FlushGarlic/GetGpuCoreClock/GetNumTca/GetOffChipTess/IsUserPa/PaHeartbeat) | 14 | 3 (stub) | — | Stubs |
 
 ---
 
@@ -589,22 +565,20 @@ Examples compile.
 | Missing firmware symbol at link | Med | Med | Declare externs; link test on orbis |
 | Struct layout drift | Low | High | `_Static_assert` every struct size |
 | OpenOrbis header conflict | Med | Med | Don't include `orbis/_types/gnm.h` |
-| RE-5 (InitDefaultHardwareState blob) incomplete | Med | Med | Use MMIO-direct version as fallback; RE blob when needed |
-| Eden migration breaks builds | Med | Med | Gate P7: verify Eden links |
+| RE-5 (InitDefaultHardwareState blob) incomplete | — | — | RE-5 DONE — blob fully extracted |
+| Eden migration breaks builds | Med | Med | Gate P5: verify Eden links |
 | Debugger stubs wrong error codes | Low | Low | Match `ORBIS_GNM_ERROR_*` |
 
 ---
 
 ## Execution Order
 
-0. **Phase 0 (RE)** — Ongoing. RE-1 to RE-4, RE-6, RE-10 done. RE-5/7/8/9 as needed.
-1. **Phase 1 (DONE)** — Headers + build system. Foundation.
-2. **Phase 2** — Core implementation (command buffer, RT, texture, shader, gpuaddr).
-   Implement against RE-1/RE-2 PM4 byte layouts.
-3. **Phase 3** — Runtime delegation (orbis backend). First PS4 link.
-4. **Phase 5** — Generic backend (parallel with 3). Host testing.
-5. **Phase 4** — Validate + resource + workload. Validation is stubs per RE-3.
-6. **Phase 7** — Test porting + Eden integration.
-7. **Phase 6** — Debugger/profiler stubs. Polish.
+0. **Phase 0 (RE) [DONE]** — All 10 RE deliverables complete. 122/207 functions are stubs on retail.
+1. **Phase 1 (DONE)** — Headers + build system. 207 sceGnm* declared.
+2. **Phase 2 (DONE)** — Core implementation. 24 source files, libopengnm.a builds.
+3. **Phase 3 [NEXT]** — Runtime delegation (orbis backend). ~85 real externs + ~122 stubs.
+4. **Phase 4** — Generic backend (host testing). Parallel with Phase 3.
+5. **Phase 5** — Tests + Eden integration.
 
-After Phase 3, opengnm builds and links on PS4. After Phase 7, it's validated.
+After Phase 3, opengnm builds and links on PS4. After Phase 5, it's validated.
+opengnm-psbc (shader compiler) resumes after Phase 5.
