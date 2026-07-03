@@ -145,32 +145,36 @@ The RE phase produces verified documentation that Phases 2-6 implement against:
 - Kernel masks ib_base with `0x000FFFFF00000000`, ORs `VMID<<52`
 - `sceGnmSubmitAndFlipCommandBuffers` = submit + flip
 
-**RE-5: DrawInitDefaultHardwareState [PARTIAL — needs completion]**
-- Source: `tools/gnm_driver_fw900_analysis.md` — DrawInitDefaultHardwareState section
-- MMIO direct version (vaddr 0x23D0) RE'd: writes to 0xFE000F000+ range
-- **Command buffer version (PM4 blob) NOT yet identified** — likely uses a data
-  table to copy a pre-built PM4 blob, similar to shadPS4's `gnmdriver_init.h`
-- **Action needed:** Disassemble `sceGnmDrawInitDefaultHardwareState` NID export,
-  find the PM4 blob data table, extract the full default state sequence
+**RE-5: DrawInitDefaultHardwareState [DONE]**
+- Source: `tools/gnm_driver_fw900_analysis.md` — DrawInitDefaultHardwareState (RESOLVED) section
+- PM4 blob at data table vaddr 0x7E20 (128 dwords), function at vaddr 0x3260
+- Full PM4 packet sequence documented: PFP_SYNC_ME, CLEAR_STATE, SET_SH_REG_OFFSET,
+  SET_SH_REG, SET_CONTEXT_REG, ACQUIRE_MEM, SET_UCONFIG_REG, CONTEXT_CONTROL
+- Variants: 175 (0x3390), 200 (0x3380), 350 (0x34F0+)
+- Key difference from shadPS4: real driver has PFP_SYNC_ME + SET_SH_REG_OFFSET
 
 **RE-6: Shader binary parser [DONE]**
 - Source: `tools/gnm_driver_fw900_analysis.md` — Shader Binary Parser section
 - Metadata field offsets, CRC32 algorithm, resource table layout all RE'd
 
-**RE-7: SDMA function signatures [TODO]**
+**RE-7: SDMA function signatures [DONE — stubs on retail]**
 - 8 functions: `sceGnmSdmaOpen/Close/CopyLinear/CopyTiled/CopyWindow/ConstFill/Flush/GetMinCmdSize`
-- Source: `libSceGnmDriver.sprx` — find via NID, extract parameter types
-- Cross-reference: shadPS4 has partial signatures
+- **Finding: ALL 8 are stubs returning `ORBIS_GNM_ERROR_FAILURE` on retail firmware**
+- No SDMA error strings in binary, no code references to SDMA NIDs
+- shadPS4 confirms: "Not available in retail firmware"
+- See `tools/gnm_sdma_debugprof_re_analysis.md`
 
-**RE-8: Debugger/profiler function signatures [TODO — low priority]**
-- `sceGnmSqtt*` (25), `sceGnmSpm*` (12), `sceGnmDebugger*` (10) — parameter types
-- Source: `libSceGnmDriver.sprx` — find via NID, extract from disassembly
-- These are stubbed in Phase 6, but correct signatures needed for header accuracy
+**RE-8: Debugger/profiler function signatures [DONE — stubs on retail]**
+- `sceGnmSqtt*` (25), `sceGnmSpm*` (12), `sceGnmDebugger*` (10) — **ALL stubs**
+- All return `ORBIS_GNM_ERROR_FAILURE` on retail firmware
+- Require kernel-level GPU access — not available in user-mode
+- See `tools/gnm_sdma_debugprof_re_analysis.md`
 
-**RE-9: Resource registration internals [TODO — low priority]**
-- `sceGnmRegisterOwner`/`RegisterResource`/`FindResources` — internal state management
-- Source: `libSceGnmDriver.sprx` — trace data structures used
-- Needed for generic backend implementation (Phase 4)
+**RE-9: Resource registration internals [DONE — stubs on retail]**
+- `sceGnmRegisterOwner`/`RegisterResource`/`FindResources` — **ALL stubs**
+- All return `ORBIS_GNM_ERROR_FAILURE` on retail firmware
+- Resource registration is a devkit-only feature
+- See `tools/gnm_sdma_debugprof_re_analysis.md`
 
 **RE-10: GnmCompositor real-world patterns [DONE]**
 - Source: `tools/gnm_compositor_analysis.md`
@@ -322,23 +326,28 @@ binary container format. See `opengnm-psbc/OPENGNM_PSBC_PLAN.md`.
 
 ## Phases
 
-### Phase 0: Reverse Engineering [ONGOING — mostly DONE]
+### Phase 0: Reverse Engineering [DONE]
 
 RE ground truth for PM4 formats, validation rules, and firmware behavior.
+**All 10 RE deliverables complete.**
 
-**Completed (RE-1 to RE-4, RE-6, RE-10):**
-- Draw/dispatch PM4 packet formats (12+4 functions) — `tools/gnm_driver_fw900_analysis.md`
-- Shader set/update PM4 packet formats (8 stages) — `tools/gnm_pm4_shader_analysis.md`
-- Validation function behavior (all stubs, return 0) — `tools/gnm_driver_fw900_analysis.md`
-- Submit function packet format — `tools/gnm_driver_fw900_analysis.md`
-- Shader binary parser — `tools/gnm_driver_fw900_analysis.md`
-- GnmCompositor real-world patterns — `tools/gnm_compositor_analysis.md`
+**Key finding: 122 of 207 sceGnm* functions are stubs returning
+ORBIS_GNM_ERROR_FAILURE on retail firmware.** Only ~85 functions have real
+implementations (draw, dispatch, shader, submit, init, compute queue, VGT, validate).
 
-**Remaining (RE-5, RE-7, RE-8, RE-9):**
-- RE-5: DrawInitDefaultHardwareState PM4 blob (command buffer version) — MEDIUM
-- RE-7: SDMA function signatures (8 functions) — LOW
-- RE-8: Debugger/profiler signatures (Sqtt/Spm/Debugger ~47 functions) — LOW
-- RE-9: Resource registration internals — LOW
+See `tools/gnm_sdma_debugprof_re_analysis.md` for the retail-vs-devkit breakdown.
+
+**Completed RE deliverables:**
+- RE-1: Draw/dispatch PM4 packet formats (12+4 functions) — DONE
+- RE-2: Shader set/update PM4 packet formats (8 stages) — DONE
+- RE-3: Validation function behavior (all stubs, return 0) — DONE
+- RE-4: Submit function packet format — DONE
+- RE-5: DrawInitDefaultHardwareState PM4 blob (128 dwords) — DONE
+- RE-6: Shader binary parser — DONE
+- RE-7: SDMA functions (8, all stubs on retail) — DONE
+- RE-8: Debugger/profiler (Sqtt/Spm/Debugger ~47, all stubs on retail) — DONE
+- RE-9: Resource registration (19, all stubs on retail) — DONE
+- RE-10: GnmCompositor real-world patterns — DONE
 
 **Method:** Load `libSceGnmDriver.sprx` into r2/IDA with `aerolib.csv` NID resolution.
 Find functions via NID export table, trace logic, document findings in `tools/`.
@@ -512,17 +521,17 @@ Examples compile.
 | Shader set (Vs/Ps/Ps350/Cs/CsMod/Gs/Es/Hs/Ls/Embedded) | 11 | 2-3 | RE-2 DONE | Core, PM4 RE'd |
 | Shader update (Vs/Ps/Ps350/Gs/Hs) | 5 | 3 | RE-2 DONE | Forward to firmware |
 | Submit (CommandBuffers/AndFlip/ForWorkload/Done/RequestFlip) | 7 | 3 | RE-4 DONE | Forward to firmware |
-| Init (DefaultHardwareState 175/200/350/ContextState 400) | 6 | 2-3 | RE-5 PARTIAL | PM4 blob needs RE |
-| SDMA (Open/Close/CopyLinear/CopyTiled/CopyWindow/ConstFill/Flush/GetMinCmd) | 8 | 3 | RE-7 TODO | Forward to firmware |
+| Init (DefaultHardwareState 175/200/350/ContextState 400) | 6 | 2-3 | RE-5 DONE | PM4 blob needs RE |
+| SDMA (Open/Close/CopyLinear/CopyTiled/CopyWindow/ConstFill/Flush/GetMinCmd) | 8 | 3 | RE-7 DONE (stubs) | Forward to firmware |
 | Compute queue (Map/MapPriority/Unmap/TessRing/GsRing) | 5 | 3 | — | Forward to firmware |
 | VGT/Wave (SetVgtControl/Reset/WaveLimit*) | 4 | 3 | — | Forward to firmware |
 | Validate (Validate*/GetDiagnostics/Disable/Reset/Register) | 11 | 4 | RE-3 DONE | Stubs (firmware stubs too) |
-| Resource (RegisterOwner/Resource/Find/Get/Set/Unregister) | 19 | 4 | RE-9 TODO | New |
+| Resource (RegisterOwner/Resource/Find/Get/Set/Unregister) | 19 | 4 | RE-9 DONE (stubs) | New |
 | Workload (Begin/End/Create/Destroy/DingDong/AreSubmits) | 8 | 4 | — | New |
 | EQ (AddEqEvent/Delete/GetEventType/GetTimeStamp) | 4 | 4 | — | Forward to firmware |
-| Sqtt (trace buffer profiling) | 25 | 6 | RE-8 TODO | Stubs |
-| Spm (performance counters) | 12 | 6 | RE-8 TODO | Stubs |
-| Debugger (GetAddressWatch/Halt/Read/Write/Resume) | 10 | 6 | RE-8 TODO | Stubs |
+| Sqtt (trace buffer profiling) | 25 | 6 | RE-8 DONE (stubs) | Stubs |
+| Spm (performance counters) | 12 | 6 | RE-8 DONE (stubs) | Stubs |
+| Debugger (GetAddressWatch/Halt/Read/Write/Resume) | 10 | 6 | RE-8 DONE (stubs) | Stubs |
 | Markers (Push/Pop/Color/Set/ThreadTrace) | 6 | 6 | — | Stubs |
 | Coredump/Misc (GetCoredump*/GetDebugTimestamp/GetLastWaited) | 8 | 6 | — | Stubs |
 | DriverInternal (RetrieveGnmInterface* 7 variants/VirtualQuery/TriggerCapture) | 10 | 6 | — | Stubs |
