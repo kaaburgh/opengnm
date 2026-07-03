@@ -17,8 +17,8 @@ OPENGNM_SRCS += \
 	src/platform_orbis.c
 else
 OPENGNM_SRCS += \
-	# src/driver_generic.c \
-	# src/platform_generic.c
+	src/driver_generic.c \
+	src/platform_generic.c
 endif
 
 # GpuAddr (AMD PAL-derived surface computation)

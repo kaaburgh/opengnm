@@ -73,8 +73,8 @@ if(OPENGNM_ORBIS_PLATFORM)
     )
 else()
     list(APPEND OPENGNM_SOURCES
-        # src/driver_generic.c  # Phase 5
-        # src/platform_generic.c # Phase 5
+        src/driver_generic.c
+        src/platform_generic.c
     )
 endif()
 
