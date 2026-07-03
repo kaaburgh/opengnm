@@ -111,6 +111,44 @@ alone.
 - **ps4debug** — TCP-based GDB-style debugger for runtime verification on PS4
 - **GoldHEN v2.4b18** — kernel access for FW 9.00
 
+**IDA Pro plugins (for automated NID resolution and module loading):**
+- **ps4_module_loader** at `/Users/bizkut/Downloads/PS5/homebrew/ps4_module_loader/` —
+  IDA loader plugin (Python, 2054 lines) for PS4 module files (.prx, .sprx, .elf, .self).
+  Parses PS4-specific ELF types (`ET_SCE_DYNEXEC`, `ET_SCE_DYNAMIC`,
+  `PT_SCE_DYNLIBDATA`), all PS4 dynamic tags (`DT_SCE_EXPORT_LIB` = `0x61000013`,
+  `DT_SCE_IMPORT_LIB` = `0x61000015`, etc.), resolves NIDs via `aerolib.csv`
+  (97,623 entries), sets up IDA segments/imports/exports/function names automatically.
+  Includes `ps4_errno_700.til` (PS4 error code type library). Install: copy
+  `ps4_module.py` + `aerolib.csv` into IDA loaders directory.
+- **ps4_nid_resolver_ida** at `/Users/bizkut/Downloads/PS5/homebrew/ps4_nid_resolver_ida/` —
+  IDA plugin (C++) that resolves PS4 NIDs to function names using ps4libdoc JSON
+  files. Parses PS4 dynamic tags (`0x61000035` = string table, `0x61000039` = symbol
+  table, `0x61000029` = PLT reloc table), looks up each NID in ps4libdoc, renames
+  functions in IDA. Use: `Ctrl+F10` to resolve, `Ctrl+Alt+F10` for settings.
+- **aerolib.csv** at `/Users/bizkut/Downloads/PS5/homebrew/OrbisNet/aerolib.csv` (also
+  in `ps4_module_loader/aerolib.csv`) — 97,623 NID→symbol mappings. Format:
+  `NID symbol_name` (space-delimited, one per line). Covers 219 `sceGnm*` NIDs.
+- **ps4libdoc** at `/Users/bizkut/Downloads/PS5/homebrew/OpenOrbis/ps4libdoc/known_names.txt` —
+  219 known `sceGnm*` NIDs for cross-referencing.
+
+**NID generation (reference):**
+- PS4 NIDs are SHA1 hashes of `symbol_name + NID_suffix`, truncated to 8 bytes,
+  base64-encoded. The NID default_suffix is `518D64A635DED8C1E6B039B1C3E55230`
+  (from [PSDevWiki/Keys](https://www.psdevwiki.com/ps4/Keys)). However, Sony uses
+  firmware-version-dependent NID obfuscation, so brute-forcing unmapped NIDs with
+  just the suffix does not work. Use aerolib.csv / ps4libdoc for resolution instead.
+- 7 NIDs in `libSceGnmDriver.sprx` are unmapped (not in aerolib.csv or ps4libdoc):
+  `nSl-NqcCi3E`, `VKLsX6TGJBM`, `otfsenvPebM`, `2T1zOhnddFQ`, `QP7vDGU0xDQ`,
+  `XSIZOjHqEUI`, `qhKjy4mQhUo`. These are likely private Sony internal functions.
+  They do not block opengnm (all 207 public `sceGnm*` functions are resolved).
+
+**PSDevWiki Keys page** ([https://www.psdevwiki.com/ps4/Keys](https://www.psdevwiki.com/ps4/Keys)):
+- System modules keyset revisions per firmware version (FW 9.00 = keyset 5.0)
+- SAMU keys, PFS keys, portability EncDec keys, kernel keys
+- Not directly needed for opengnm (we work with already-decrypted ELFs at
+  `/Users/bizkut/Downloads/PS4/FIRMWARES/9.00/`), but useful reference for
+  understanding PS4 module encryption if working with encrypted SELF files.
+
 ### RE Deliverables
 
 The RE phase produces verified documentation that Phases 2-6 implement against:
