@@ -51,7 +51,7 @@ else()
     )
 endif()
 
-# GpuAddr sources (ported from freegnm, AMD PAL-derived math)
+# GpuAddr sources (AMD PAL-derived surface computation math)
 list(APPEND OPENGNM_SOURCES
     # src/gpuaddr/surface.c
     # src/gpuaddr/tilemodes.c

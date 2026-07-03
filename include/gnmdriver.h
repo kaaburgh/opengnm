@@ -19,7 +19,7 @@
  */
 
 /* =========================================================================
- *  SceGnmDrawFlags  (from freegnm/gnm/driver.h)
+ *  SceGnmDrawFlags  (from the PS4 SDK ABI)
  * ========================================================================= */
 typedef struct {
 	uint32_t predication : 1;

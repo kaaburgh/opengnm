@@ -52,6 +52,6 @@ MIT, see [COPYING](COPYING).
 
 ## Sources
 
-- Forked from [freegnm](https://gitgud.io/gluesniffer/freegnm) (clean rewrite)
+- Clean rewrite, based on the PS4 SDK ABI and AMD public documentation
 - Sony ABI reference: `shadPS4/src/core/libraries/gnmdriver/`
 - Surface computation: AMD PAL / Mesa AddrLib
