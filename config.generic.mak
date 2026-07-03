@@ -11,6 +11,6 @@ PLATFORM=generic
 AR=ar
 CC=clang
 LD=clang
-CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -O2 -g
+CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -I./src -O2 -g
 LDFLAGS=-L. -lopengnm -lm
 LIB_LDFLAGS=-shared -L. -lm

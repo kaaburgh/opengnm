@@ -46,8 +46,7 @@ OPENGNM_SRCS += \
 	src/pm4/error.c \
 	src/pm4/types.c
 
-# Filter out comment-only lines (lines starting with # after whitespace)
-OPENGNM_SRCS := $(filter-out #%,$(OPENGNM_SRCS))
+# Source list is already clean (no comment lines in the list above)
 OPENGNM_SRCS := $(strip $(OPENGNM_SRCS))
 
 # === Library ===
@@ -87,10 +86,28 @@ install-lib: lib
 	install -m 644 $(LIB_STATIC) $(DESTDIR)$(LIBDIR)/
 
 # === Tests ===
-tests:
-	@echo "opengnm: Tests will be added in Phase 7"
+TEST_SRCS = \
+	tests/test_main.c \
+	tests/test_surface.c \
+	tests/test_drawcmd.c \
+	tests/test_validate.c \
+	tests/test_api.c
+
+TEST_BIN = opengnm_tests
+
+tests: lib
+	@echo "CC  tests"
+	@for src in $(TEST_SRCS); do \
+		obj=$$(echo $$src | sed 's/\.c$$/.o/') ; \
+		dir=$$(dirname $$obj) ; \
+		mkdir -p $$dir ; \
+		$(CC) $(CFLAGS) -I./include -I./src -I./tests -c $$src -o $$obj ; \
+	done
+	$(CC) $(LDFLAGS) $$(echo $(TEST_SRCS) | sed 's/\.c/.o/g') -o $(TEST_BIN) $(LIB_STATIC)
+	./$(TEST_BIN)
 
 # === Clean ===
 clean:
 	find . -name '*.o' -path '*/src/*' -delete
-	rm -f $(LIB_STATIC) $(LIB_SHARED)
+	find . -name '*.o' -path '*/tests/*' -delete
+	rm -f $(LIB_STATIC) $(LIB_SHARED) $(TEST_BIN)

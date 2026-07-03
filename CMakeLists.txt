@@ -103,6 +103,24 @@ endif()
 option(OPENGNM_BUILD_TESTS "Build opengnm tests" ON)
 if(OPENGNM_BUILD_TESTS)
     enable_testing()
+
+    add_executable(opengnm_tests
+        tests/test_main.c
+        tests/test_surface.c
+        tests/test_drawcmd.c
+        tests/test_validate.c
+        tests/test_api.c
+    )
+    target_link_libraries(opengnm_tests PRIVATE opengnm)
+    target_include_directories(opengnm_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    # Tests need to see internal headers (src/u/utility.h etc.)
+    target_include_directories(opengnm_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+
+    add_test(NAME opengnm_all_tests COMMAND opengnm_tests)
 endif()
 
 # === Install ===
