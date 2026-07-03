@@ -48,13 +48,14 @@ OPENGNM_SRCS += \
 
 # Source list is already clean (no comment lines in the list above)
 OPENGNM_SRCS := $(strip $(OPENGNM_SRCS))
+OPENGNM_OBJS = $(OPENGNM_SRCS:.c=.o)
 
 # === Library ===
 LIB_NAME = libopengnm
 LIB_STATIC = $(LIB_NAME).a
 LIB_SHARED = $(LIB_NAME)$(LIBEXT).$(LIBVER)
 
-.PHONY: all lib tools tests clean install
+.PHONY: all lib tools tests link-smoke clean install
 
 all: lib
 
@@ -67,7 +68,8 @@ ifneq ($(OPENGNM_SRCS),)
 		echo "CC  $$src" ; \
 		$(CC) $(CFLAGS) -c $$src -o $$obj ; \
 	done
-	$(AR) rcs $(LIB_STATIC) $$(find . -name '*.o' -path '*/src/*')
+	rm -f $(LIB_STATIC)
+	$(AR) rcs $(LIB_STATIC) $(OPENGNM_OBJS)
 else
 	@echo "opengnm: No source files configured yet (Phase 1 — headers only)"
 	@echo "opengnm: Headers are in include/ — use 'make install' to install them"
@@ -94,6 +96,7 @@ TEST_SRCS = \
 	tests/test_api.c
 
 TEST_BIN = opengnm_tests
+TEST_OBJS = $(TEST_SRCS:.c=.o)
 
 tests: lib
 	@echo "CC  tests"
@@ -103,11 +106,27 @@ tests: lib
 		mkdir -p $$dir ; \
 		$(CC) $(CFLAGS) -I./include -I./src -I./tests -c $$src -o $$obj ; \
 	done
-	$(CC) $(LDFLAGS) $$(echo $(TEST_SRCS) | sed 's/\.c/.o/g') -o $(TEST_BIN) $(LIB_STATIC)
+	$(CC) $(LDFLAGS) $(TEST_OBJS) -o $(TEST_BIN) $(LIB_STATIC)
 	./$(TEST_BIN)
+
+# === Orbis link smoke test ===
+LINK_SMOKE_SRC = tests/link_smoke.c
+LINK_SMOKE_OBJ = tests/link_smoke.o
+LINK_SMOKE_ELF = opengnm_link_smoke.elf
+
+link-smoke: lib
+ifeq ($(PLATFORM),orbis)
+	@echo "CC  $(LINK_SMOKE_SRC)"
+	$(CC) $(CFLAGS) -I./tests -c $(LINK_SMOKE_SRC) -o $(LINK_SMOKE_OBJ)
+	@echo "LD  $(LINK_SMOKE_ELF)"
+	$(LD) -m elf_x86_64 -e main -L$(TOOLCHAIN)/lib -L. $(LINK_SMOKE_OBJ) $(LIB_STATIC) -lc -lkernel -lSceGnmDriver -o $(LINK_SMOKE_ELF)
+else
+	@echo "link-smoke requires PLATFORM=orbis"
+	@exit 1
+endif
 
 # === Clean ===
 clean:
 	find . -name '*.o' -path '*/src/*' -delete
 	find . -name '*.o' -path '*/tests/*' -delete
-	rm -f $(LIB_STATIC) $(LIB_SHARED) $(TEST_BIN)
+	rm -f $(LIB_STATIC) $(LIB_SHARED) $(TEST_BIN) $(LINK_SMOKE_ELF)

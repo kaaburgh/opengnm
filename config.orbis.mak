@@ -17,7 +17,7 @@ TOOLCHAIN=$(OO_PS4_TOOLCHAIN)
 AR=ar
 CC=clang
 LD=ld.lld
-CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -O2 -g \
+CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -I./src -O2 -g \
     --target=x86_64-ps4-elf -fPIC \
     -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include
 LDFLAGS=-m elf_x86_64 -L$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -L. -lopengnm

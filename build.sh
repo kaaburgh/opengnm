@@ -2,16 +2,19 @@
 # build.sh — Build opengnm using Docker (OpenOrbis SDK)
 #
 # Usage:
-#   ./build.sh          — build PS4 library + install headers
+#   ./build.sh          — build PS4 library only (orbis target)
 #   ./build.sh lib      — build PS4 library only (orbis target)
 #   ./build.sh headers  — install headers only (no compilation)
 #   ./build.sh tests    — build + run host tests (generic target)
+#   ./build.sh docker-build       — OpenOrbis Docker build + link smoke
+#   ./build.sh docker-link-smoke  — OpenOrbis Docker link smoke only
 #   ./build.sh clean    — clean build directory
 #   ./build.sh shell    — open shell in Docker with SDK
 
 set -e
 
 IMAGE="openorbisofficial/toolchain:latest"
+DOCKER_OO_PS4_TOOLCHAIN="${DOCKER_OO_PS4_TOOLCHAIN:-/usr/lib/OpenOrbisSDK}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OPENGNM_DIR="$SCRIPT_DIR"
 
@@ -77,17 +80,23 @@ case "$ACTION" in
         ;;
     shell)
         docker run --rm -it -v "$OPENGNM_DIR:/opengnm" -w /opengnm \
-            -e OO_PS4_TOOLCHAIN=/usr/local \
+            -e OO_PS4_TOOLCHAIN="$DOCKER_OO_PS4_TOOLCHAIN" \
             "$IMAGE" /bin/bash
         ;;
     docker-build)
         write_orbis_config
         docker run --rm -v "$OPENGNM_DIR:/opengnm" -w /opengnm \
-            -e OO_PS4_TOOLCHAIN=/usr/local \
-            "$IMAGE" /bin/bash -c "make lib && make install-lib DESTDIR=/usr/local"
+            -e OO_PS4_TOOLCHAIN="$DOCKER_OO_PS4_TOOLCHAIN" \
+            "$IMAGE" /bin/bash -c "make link-smoke install-lib DESTDIR=/tmp/opengnm-install"
+        ;;
+    docker-link-smoke)
+        write_orbis_config
+        docker run --rm -v "$OPENGNM_DIR:/opengnm" -w /opengnm \
+            -e OO_PS4_TOOLCHAIN="$DOCKER_OO_PS4_TOOLCHAIN" \
+            "$IMAGE" /bin/bash -c "make link-smoke"
         ;;
     *)
-        echo "Usage: $0 {all|lib|headers|tests|clean|shell|docker-build}"
+        echo "Usage: $0 {all|lib|headers|tests|clean|shell|docker-build|docker-link-smoke}"
         exit 1
         ;;
 esac

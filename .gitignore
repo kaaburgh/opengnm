@@ -19,6 +19,7 @@ config.mak
 # Test artifacts
 testgnm
 opengnm_tests
+opengnm_link_smoke.elf
 surf.bin
 test.png
 
