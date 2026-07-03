@@ -505,16 +505,17 @@ cleanly with `clang -c`.
 
 Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) and 7.
 Host-side tests, OpenOrbis link validation, PS4 package generation, package
-staging, and the PS4 hardware-smoke run are complete. Downstream Eden/example
-integration is tracked separately because those projects consume the older
-`freegnm` `gnm*` wrapper API, not the Sony SDK-style `sceGnm*` ABI that opengnm
-exposes.
+staging, and the PS4 hardware-smoke run are complete. A first downstream
+migration layer is also present: opt-in `freegnm` source compatibility maps
+compatible `gnm*` wrapper calls to the Sony SDK-style `sceGnm*` ABI without
+exporting a second binary ABI.
 
 **Deliverables:**
 - `tests/test_surface.c` — gpuaddr surface computation (7 tests) ✅
 - `tests/test_drawcmd.c` — PM4 command buffer building + ABI regressions (16 tests) ✅
 - `tests/test_validate.c` — PM4 validation, generic backend (9 tests) ✅
 - `tests/test_api.c` — Call every sceGnm* category once (18 tests) ✅
+- `tests/test_compat.c` — freegnm-style include paths and wrapper aliases (3 tests) ✅
 - `tests/link_smoke.c` — PS4-target link smoke against OpenOrbis SDK libs ✅
 - `tests/hardware_smoke.c` — PS4 VideoOut + direct-memory + submit/EOP smoke ✅
 - `tests/test.h` — minimal test framework (utassert/utasserteq/test_suite) ✅
@@ -525,12 +526,12 @@ exposes.
 - Makefile: `hardware-smoke` target for `PLATFORM=orbis` ✅
 - Makefile: `hardware-smoke-pkg` target for installable PS4 package ✅
 - Full OpenOrbis Docker/orbis build + link smoke (`./build.sh docker-build`) ✅
-- Assess Eden/example direct-opengnm integration — DONE: not a valid direct gate
-  until a `gnm*` compatibility adapter or downstream migration exists
+- Assess Eden/example direct-opengnm integration — DONE: adapter layer started;
+  unsupported tooling-only old headers still need migration
 - PS4 hardware smoke test for submit/draw/present paths — PASS on 2026-07-03:
   full-screen green with scrolling white bar and digit `0`
 
-**Gate P5A (PASSED):** All 50 host tests pass on generic backend via CMake/CTest,
+**Gate P5A (PASSED):** All 53 host tests pass on generic backend via CMake/CTest,
 strict CMake warning build, and `build.sh tests` / Makefile.
 
 **Gate P5B (PASSED):** OpenOrbis Docker/orbis compile, link smoke,
@@ -539,11 +540,13 @@ hardware run succeed. The visible result was a full-screen green status view
 with scrolling white bar and digit `0`, confirming the EOP label write after
 `sceGnmSubmitCommandBuffers`/`sceGnmSubmitDone`.
 
-**Deferred downstream migration:** Eden and `freegnm-examples` link `../freegnm`
-and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`, `GnmCommandBuffer`,
-etc.). opengnm intentionally exposes `sceGnm*` / `sceGpa*` only, so these consumers
-need either a compatibility shim or source migration before they can serve as
-direct opengnm integration tests.
+**Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
+and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
+`GnmCommandBuffer`, etc.). opengnm now provides source-only aliases in
+`<compat/freegnm.h>` plus core `<gnm/...>` forwarding headers. This preserves the
+official `sceGnm*` / `sceGpa*` binary ABI because no exported `gnm*` symbols are
+added. Consumers that include old `gnm/pssl/*`, `gnm/gnf/*`, or other tool-layer
+headers still need source migration to opengnm's split tool libraries.
 
 ### Compatibility Audit: ABI and PM4 Edge Cases [DONE — 2026-07-03]
 
@@ -592,7 +595,8 @@ rejection, and NEO slice-bit preservation.
 4. **Binary-compatible struct layouts.** All `Gnm*` struct sizes preserved via
    `_Static_assert`.
 
-5. **No `gnm*` backward compat.** Clean break. Consumers migrate to `sceGnm*`.
+5. **No exported `gnm*` binary ABI.** Core compatibility is source-only through
+   opt-in aliases. Linked code still targets `sceGnm*` / `sceGpa*`.
 
 6. **No `orbis/_types/gnm.h` dependency.** opengnm provides complete declarations
    (OpenOrbis headers are incomplete — `void func()` stubs, missing types).
@@ -651,7 +655,7 @@ rejection, and NEO slice-bit preservation.
 | Orbis runtime mismatch | Low | High | Gate P5B passed on hardware: package launch reached green code `0` after submit/EOP |
 | Host backend PM4 edge-case drift | Med | High | Regression tests + shadPS4/firmware diffs |
 | Stream-out buffer base address incomplete | Med | Med | RE `STRMOUT_BUFFER_UPDATE`/base-address behavior before wiring |
-| Eden/freegnm downstream migration breaks builds | Med | Med | Keep as separate adapter/migration phase; not an opengnm ABI gate |
+| Eden/freegnm downstream migration breaks builds | Med | Med | Source-only aliases cover core headers; tooling-only headers still need migration |
 | Debugger stubs wrong error codes | Low | Low | Match `ORBIS_GNM_ERROR_*` |
 
 ---
@@ -663,13 +667,13 @@ rejection, and NEO slice-bit preservation.
 2. **Phase 2 (DONE)** — Core implementation. 24 source files, libopengnm.a builds.
 3. **Phase 3 (DONE)** — Runtime delegation (orbis backend). 74 real externs + 14 sceGnmDriver* wrappers + 172 retail stubs + 11 validate stubs + 2 platform functions.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
-5. **Phase 5A (DONE)** — Host tests (50 tests, all passing via CMake/CTest and Makefile).
+5. **Phase 5A (DONE)** — Host tests (53 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
-7. **Deferred downstream migration** — Add a `gnm*` adapter or migrate Eden/examples to `sceGnm*`.
+7. **Downstream migration (STARTED)** — Source-only `gnm*` aliases and core `<gnm/...>` forwarding headers are present; migrate unsupported tool-layer includes next.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
 After Phase 5A, host behavior is regression-tested. After Phase 5B, the
 OpenOrbis linker path, installable package path, VideoOut presentation path, and
-GNM submit/EOP path are verified on PS4 hardware. opengnm-psbc (shader compiler)
-and downstream adapter/migration work can resume with the hardware smoke gate
-closed.
+GNM submit/EOP path are verified on PS4 hardware. The first downstream adapter
+unit is in place; opengnm-psbc (shader compiler) and migration of old tooling
+headers can continue with the hardware smoke gate closed.

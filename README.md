@@ -20,20 +20,24 @@ against opengnm unmodified.
 - **Surface computation** — `sceGpa*` (gpuaddr / AddrLib) for RT/texture sizing
 - **GCN assembler** — fetch shader generation
 - **PM4 encoding** — command buffer packet building
+- **Opt-in freegnm source compatibility** — `<compat/freegnm.h>` and
+  `<gnm/...>` forwarding headers map compatible `gnm*` wrapper calls to
+  `sceGnm*` without exporting a second ABI
 
 ## Status
 
 Phases 1-4, Phase 5A, and Phase 5B are complete. The OpenOrbis Docker build,
 PS4-target link smoke, PS4 hardware-smoke package build, FTP staging, and PS4
 hardware run all pass. All 207+ `sceGnm*` functions are implemented across both
-backends, and the generic host backend passes 50 tests via CMake/CTest and
+backends, and the generic host backend passes 53 tests via CMake/CTest and
 Makefile.
 
 The verified PS4 hardware smoke result is a full-screen green status view with
 scrolling white bar and digit `0`, confirming VideoOut presentation and the GNM
 submit/EOP path. Eden and `freegnm-examples` currently consume the older `gnm*`
-wrapper API from `freegnm`, so using them with opengnm requires a separate
-migration or adapter layer.
+wrapper API from `freegnm`; the first adapter layer now covers one-to-one core
+headers and wrapper names. Consumers that include old tooling-only headers such
+as `gnm/pssl/*` or `gnm/gnf/*` still need migration to the split tool libraries.
 
 See `OPENGNM_REWRITE_PLAN.md` for the full plan and progress.
 
@@ -72,6 +76,14 @@ make install DESTDIR=$OO_PS4_TOOLCHAIN
 ./build.sh stage-hardware-pkg    # build/upload package to the configured PS4
 ./build.sh tests                 # build + run host tests
 ```
+
+## freegnm Source Compatibility
+
+Code that used the old wrapper API can either include `<compat/freegnm.h>` before
+using `gnm*` names, or switch its include path to opengnm and keep core includes
+such as `<gnm/drawcommandbuffer.h>`, `<gnm/platform.h>`, and
+`<gnm/gpuaddr/gpuaddr.h>`. The compatibility layer is source-only: linked
+objects still call the Sony SDK-style `sceGnm*` / `sceGpa*` symbols.
 
 ## License
 

@@ -79,9 +79,9 @@ endif
 install: install-headers
 
 install-headers:
-	install -d $(DESTDIR)$(INCDIR)/opengnm/pm4
+	install -d $(DESTDIR)$(INCDIR)/opengnm
 	install -m 644 include/*.h $(DESTDIR)$(INCDIR)/opengnm/
-	install -m 644 include/pm4/*.h $(DESTDIR)$(INCDIR)/opengnm/pm4/
+	cp -R include/compat include/gnm include/pm4 $(DESTDIR)$(INCDIR)/opengnm/
 
 install-lib: lib
 	install -d $(DESTDIR)$(LIBDIR)
@@ -93,7 +93,8 @@ TEST_SRCS = \
 	tests/test_surface.c \
 	tests/test_drawcmd.c \
 	tests/test_validate.c \
-	tests/test_api.c
+	tests/test_api.c \
+	tests/test_compat.c
 
 TEST_BIN = opengnm_tests
 TEST_OBJS = $(TEST_SRCS:.c=.o)

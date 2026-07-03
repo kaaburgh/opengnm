@@ -110,6 +110,7 @@ if(OPENGNM_BUILD_TESTS)
         tests/test_drawcmd.c
         tests/test_validate.c
         tests/test_api.c
+        tests/test_compat.c
     )
     target_link_libraries(opengnm_tests PRIVATE opengnm)
     target_include_directories(opengnm_tests PRIVATE
