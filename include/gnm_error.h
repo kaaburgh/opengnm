@@ -65,6 +65,14 @@ typedef enum {
 
 	/* Sony SDK capture errors */
 	ORBIS_GNM_ERROR_CAPTURE_FILE_IO = (int)0x80d15000,
+	ORBIS_GNM_ERROR_CAPTURE_RAZOR_NOT_LOADED = (int)0x80d15001,
+	ORBIS_GNM_ERROR_CAPTURE_NOTHING_TO_CAPTURE = (int)0x80d15002,
+	ORBIS_GNM_ERROR_CAPTURE_FAILED_INTERNAL = (int)0x80d1500f,
+
+	/* Sony SDK generic failure — returned by all stub functions on retail
+	 * firmware (SDMA, debugger, profiler, resource registration, etc.)
+	 * Same value as GNM_ERROR_INTERNAL_FAILURE. */
+	ORBIS_GNM_ERROR_FAILURE = (int)0x8eee00ff,
 
 	/* opengnm internal errors */
 	GNM_ERROR_INVALID_ARGS = (int)0x8eee0001,

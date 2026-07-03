@@ -1,21 +1,20 @@
 include config.mak
 
 # opengnm source files
-# (will be populated as implementation is added in Phase 2+)
 OPENGNM_SRCS = \
-	# src/drawcommandbuffer.c \
-	# src/rendertarget.c \
-	# src/depthrendertarget.c \
-	# src/texture.c \
-	# src/shader.c \
-	# src/dataformat.c \
-	# src/commandbuffer.c \
-	# src/error.c
+	src/drawcommandbuffer.c \
+	src/rendertarget.c \
+	src/depthrendertarget.c \
+	src/texture.c \
+	src/shader.c \
+	src/dataformat.c \
+	src/commandbuffer.c \
+	src/error.c
 
 ifeq ($(PLATFORM), orbis)
 OPENGNM_SRCS += \
-	# src/driver_orbis.c \
-	# src/platform_orbis.c
+	src/driver_orbis.c \
+	src/platform_orbis.c
 else
 OPENGNM_SRCS += \
 	# src/driver_generic.c \
@@ -24,28 +23,28 @@ endif
 
 # GpuAddr (AMD PAL-derived surface computation)
 OPENGNM_SRCS += \
-	# src/gpuaddr/surface.c \
-	# src/gpuaddr/tilemodes.c \
-	# src/gpuaddr/tiler.c \
-	# src/gpuaddr/decompress.c \
-	# src/gpuaddr/surfgen.c
+	src/gpuaddr/surface.c \
+	src/gpuaddr/tilemodes.c \
+	src/gpuaddr/tiler.c \
+	src/gpuaddr/decompress.c \
+	src/gpuaddr/surfgen.c \
+	src/gpuaddr/error.c
 
 # GCN assembler (internal)
 OPENGNM_SRCS += \
-	# src/gcn/assembler.c \
-	# src/gcn/decoder.c
+	src/gcn/analyzer.c \
+	src/gcn/assembler.c \
+	src/gcn/decoder.c \
+	src/gcn/error.c \
+	src/gcn/format.c \
+	src/gcn/types.c
 
 # PM4 encoding
 OPENGNM_SRCS += \
-	# src/pm4/format.c \
-	# src/pm4/decoder.c
-
-# New functionality
-OPENGNM_SRCS += \
-	# src/validate.c \
-	# src/resource.c \
-	# src/workload.c \
-	# src/debugprof.c
+	src/pm4/format.c \
+	src/pm4/decoder.c \
+	src/pm4/error.c \
+	src/pm4/types.c
 
 # Filter out comment-only lines (lines starting with # after whitespace)
 OPENGNM_SRCS := $(filter-out #%,$(OPENGNM_SRCS))

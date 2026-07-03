@@ -68,8 +68,8 @@ list(APPEND OPENGNM_SOURCES
 # Platform-specific sources
 if(OPENGNM_ORBIS_PLATFORM)
     list(APPEND OPENGNM_SOURCES
-        # src/driver_orbis.c    # Phase 3
-        # src/platform_orbis.c  # Phase 3
+        src/driver_orbis.c
+        src/platform_orbis.c
     )
 else()
     list(APPEND OPENGNM_SOURCES
