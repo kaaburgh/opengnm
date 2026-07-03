@@ -37,11 +37,12 @@ static uint32_t setcontextregisterrange(
     uint32_t numvalues
 ) {
 	if (regaddr < SI_CONTEXT_REG_OFFSET ||
-	    regaddr + numvalues > SI_CONTEXT_REG_END) {
+	    numvalues > (SI_CONTEXT_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid context register 0x%x used",
 		    regaddr
 		);
+		return 0;
 	}
 
 	cmd[0] = PKT3(PKT3_SET_CONTEXT_REG, numvalues, 0);
@@ -63,11 +64,13 @@ static uint32_t setpersistentregisterrange(
     uint32_t* cmd, uint32_t regaddr, const uint32_t* regvalues,
     uint32_t numvalues
 ) {
-	if (regaddr < SI_SH_REG_OFFSET || regaddr + numvalues > SI_SH_REG_END) {
+	if (regaddr < SI_SH_REG_OFFSET ||
+	    numvalues > (SI_SH_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid persistent register 0x%x used",
 		    regaddr
 		);
+		return 0;
 	}
 
 	cmd[0] = PKT3(PKT3_SET_SH_REG, numvalues, 0);
@@ -90,11 +93,12 @@ static uint32_t setusercfgrange(
     uint32_t numvalues
 ) {
 	if (regaddr < CIK_UCONFIG_REG_OFFSET ||
-	    regaddr + numvalues > CIK_UCONFIG_REG_END) {
+	    numvalues > (CIK_UCONFIG_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid user config register 0x%x used",
 		    regaddr
 		);
+		return 0;
 	}
 
 	cmd[0] = PKT3(PKT3_SET_UCONFIG_REG, numvalues, 0);
@@ -121,6 +125,25 @@ static const uint32_t s_indirectsgproffsets[GNM_STAGE_LS + 1] = {
     0,   /* GNM_STAGE_HS */
     332, /* GNM_STAGE_LS */
 };
+
+static SceGnmDrawFlags makedrawflags(uint32_t rawflags) {
+	SceGnmDrawFlags flags = {0};
+	memcpy(&flags, &rawflags, sizeof(flags));
+	return flags;
+}
+
+static uint32_t drawflagsraw(SceGnmDrawFlags flags) {
+	uint32_t rawflags = 0;
+	memcpy(&rawflags, &flags, sizeof(rawflags));
+	return rawflags;
+}
+
+static uint32_t drawinitiator(SceGnmDrawFlags flags, uint32_t source_select) {
+	if (sceGnmGpuMode() == GNM_GPU_NEO) {
+		source_select |= drawflagsraw(flags) & 0xE0000000u;
+	}
+	return source_select;
+}
 
 
 /* ======================================================================
@@ -312,8 +335,8 @@ int32_t sceGnmDriverDrawIndex(
     uint32_t* cmd, uint32_t numdwords, uint32_t indexcount,
     const void* indexaddr, SceGnmDrawFlags flags
 ) {
-	const uint32_t rawflags = *(uint32_t*)&flags;
-	if (!cmd || numdwords != 10 || (uintptr_t)indexaddr & 1 ||
+	const uint32_t rawflags = drawflagsraw(flags);
+	if (!cmd || numdwords != 10 || !indexaddr || (uintptr_t)indexaddr & 1 ||
 	    (rawflags & 0x1FFFFFFE) != 0) {
 		return GNM_ERROR_CMD_FAILED;
 	}
@@ -323,7 +346,7 @@ int32_t sceGnmDriverDrawIndex(
 	cmd[2] = (uintptr_t)indexaddr & 0xfffffffe;
 	cmd[3] = ((uintptr_t)indexaddr >> 32) & 0xffffffff;
 	cmd[4] = indexcount;
-	cmd[5] = 0;
+	cmd[5] = drawinitiator(flags, 0);
 	cmd += 6;
 
 	cmd[0] = PKT3(PKT3_NOP, 2, 0);
@@ -338,14 +361,16 @@ int32_t sceGnmDriverDrawIndexAuto(
     uint32_t* cmd, uint32_t numdwords, uint32_t indexcount,
     SceGnmDrawFlags flags
 ) {
-	const uint32_t rawflags = *(uint32_t*)&flags;
+	const uint32_t rawflags = drawflagsraw(flags);
 	if (!cmd || numdwords != 7 || (rawflags & 0x1FFFFFFE) != 0) {
 		return GNM_ERROR_CMD_FAILED;
 	}
 
 	cmd[0] = PKT3(PKT3_DRAW_INDEX_AUTO, 1, flags.predication);
 	cmd[1] = indexcount;
-	cmd[2] = S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX);
+	cmd[2] = drawinitiator(
+	    flags, S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX)
+	);
 	cmd += 3;
 
 	cmd[0] = PKT3(PKT3_NOP, 2, 0);
@@ -361,7 +386,7 @@ int32_t sceGnmDriverDrawIndexIndirect(
     uint8_t vertexoffusgpr, uint8_t instanceoffusgpr, SceGnmDrawFlags flags
 ) {
 	const uint32_t maxdwords = 9;
-	const uint32_t rawflags = *(uint32_t*)&flags;
+	const uint32_t rawflags = drawflagsraw(flags);
 
 	if (!cmd || numdwords != maxdwords || vertexoffusgpr > 15 ||
 	    instanceoffusgpr > 15 || stage > GNM_STAGE_LS ||
@@ -375,7 +400,7 @@ int32_t sceGnmDriverDrawIndexIndirect(
 	cmd[1] = dataoffset;
 	cmd[2] = (vertexoffusgpr ? sgproff + vertexoffusgpr : 0) & 0xffff;
 	cmd[3] = (instanceoffusgpr ? sgproff + instanceoffusgpr : 0) & 0xffff;
-	cmd[4] = 0;
+	cmd[4] = drawinitiator(flags, 0);
 	cmd += 5;
 
 	cmd[0] = PKT3(PKT3_NOP, 2, 0);
@@ -391,7 +416,7 @@ int32_t sceGnmDriverDrawIndirect(
     uint8_t vertexoffusgpr, uint8_t instanceoffusgpr, SceGnmDrawFlags flags
 ) {
 	const uint32_t maxdwords = 9;
-	const uint32_t rawflags = *(uint32_t*)&flags;
+	const uint32_t rawflags = drawflagsraw(flags);
 
 	if (!cmd || numdwords != maxdwords || vertexoffusgpr > 15 ||
 	    instanceoffusgpr > 15 || stage > GNM_STAGE_LS ||
@@ -405,7 +430,9 @@ int32_t sceGnmDriverDrawIndirect(
 	cmd[1] = dataoffset;
 	cmd[2] = (vertexoffusgpr ? sgproff + vertexoffusgpr : 0) & 0xffff;
 	cmd[3] = (instanceoffusgpr ? sgproff + instanceoffusgpr : 0) & 0xffff;
-	cmd[4] = S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX);
+	cmd[4] = drawinitiator(
+	    flags, S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX)
+	);
 	cmd += 5;
 
 	cmd[0] = PKT3(PKT3_NOP, 2, 0);
@@ -422,7 +449,7 @@ int32_t sceGnmDriverDrawIndexIndirectMulti(
     SceGnmDrawFlags flags
 ) {
 	const uint32_t maxdwords = 11;
-	const uint32_t rawflags = *(uint32_t*)&flags;
+	const uint32_t rawflags = drawflagsraw(flags);
 	if (!cmd || numdwords != maxdwords || vertexoffusgpr > 15 ||
 	    instanceoffusgpr > 15 ||
 	    (stage != GNM_STAGE_VS && stage != GNM_STAGE_ES &&
@@ -439,7 +466,7 @@ int32_t sceGnmDriverDrawIndexIndirectMulti(
 	cmd[3] = (instanceoffusgpr ? (sgproff + instanceoffusgpr) & 0xffff : 0);
 	cmd[4] = maxcount;
 	cmd[5] = 0x14; /* sizeof(DrawIndexedIndirectArgs) */
-	cmd[6] = 0;    /* draw_initiator */
+	cmd[6] = drawinitiator(flags, 0);
 	cmd += 7;
 
 	cmd[0] = PKT3(PKT3_NOP, 3, 0);
@@ -456,7 +483,7 @@ int32_t sceGnmDriverDrawIndirectMulti(
     SceGnmDrawFlags flags
 ) {
 	const uint32_t maxdwords = 11;
-	const uint32_t rawflags = *(uint32_t*)&flags;
+	const uint32_t rawflags = drawflagsraw(flags);
 	if (!cmd || numdwords != maxdwords || vertexoffusgpr > 15 ||
 	    instanceoffusgpr > 15 || stage > GNM_STAGE_LS ||
 	    (rawflags & 0x1FFFFFFE) != 0) {
@@ -471,7 +498,9 @@ int32_t sceGnmDriverDrawIndirectMulti(
 	cmd[3] = (instanceoffusgpr ? (sgproff + instanceoffusgpr) & 0xffff : 0);
 	cmd[4] = maxcount;
 	cmd[5] = 0x10; /* sizeof(DrawIndirectArgs) */
-	cmd[6] = S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX);
+	cmd[6] = drawinitiator(
+	    flags, S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX)
+	);
 	cmd += 7;
 
 	cmd[0] = PKT3(PKT3_NOP, 3, 0);
@@ -488,7 +517,7 @@ int32_t sceGnmDriverDrawIndexIndirectCountMulti(
     uint8_t instanceoffusgpr, SceGnmDrawFlags flags
 ) {
 	const uint32_t maxdwords = 16;
-	const uint32_t rawflags = *(uint32_t*)&flags;
+	const uint32_t rawflags = drawflagsraw(flags);
 	if (!cmd || numdwords != maxdwords || vertexoffusgpr > 15 ||
 	    instanceoffusgpr > 15 ||
 	    (stage != GNM_STAGE_VS && stage != GNM_STAGE_ES &&
@@ -513,7 +542,7 @@ int32_t sceGnmDriverDrawIndexIndirectCountMulti(
 	cmd[6] = (uint32_t)(countaddr & 0xffffffff);
 	cmd[7] = (uint32_t)(countaddr >> 32);
 	cmd[8] = 0x14; /* sizeof(DrawIndexedIndirectArgs) */
-	cmd[9] = 0;    /* draw_initiator */
+	cmd[9] = drawinitiator(flags, 0);
 	cmd += 10;
 
 	cmd[0] = PKT3(PKT3_NOP, 2, 0);
@@ -789,15 +818,13 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndex(uint32_t* cmdbuf, uint32_t size,
                                      uint32_t index_count, uintptr_t index_addr,
                                      uint32_t flags, uint32_t type) {
 	(void)type;
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndex(cmdbuf, size, index_count, (void*)index_addr, f);
 }
 
 int32_t PS4_SYSV_ABI sceGnmDrawIndexAuto(uint32_t* cmdbuf, uint32_t size,
                                          uint32_t index_count, uint32_t flags) {
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndexAuto(cmdbuf, size, index_count, f);
 }
 
@@ -807,8 +834,10 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndexIndirect(uint32_t* cmdbuf, uint32_t size,
                                              uint32_t vertex_sgpr_offset,
                                              uint32_t instance_sgpr_offset,
                                              uint32_t flags) {
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	if (vertex_sgpr_offset >= 0x10 || instance_sgpr_offset >= 0x10) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndexIndirect(
 	    cmdbuf, size, data_offset, shader_stage,
 	    (uint8_t)vertex_sgpr_offset, (uint8_t)instance_sgpr_offset, f
@@ -821,8 +850,10 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndirect(uint32_t* cmdbuf, uint32_t size,
                                         uint32_t vertex_sgpr_offset,
                                         uint32_t instance_sgpr_offset,
                                         uint32_t flags) {
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	if (vertex_sgpr_offset >= 0x10 || instance_sgpr_offset >= 0x10) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndirect(
 	    cmdbuf, size, data_offset, shader_stage,
 	    (uint8_t)vertex_sgpr_offset, (uint8_t)instance_sgpr_offset, f
@@ -836,8 +867,10 @@ int PS4_SYSV_ABI sceGnmDrawIndexIndirectMulti(uint32_t* cmdbuf, uint32_t size,
                                               uint32_t vertex_sgpr_offset,
                                               uint32_t instance_sgpr_offset,
                                               uint32_t flags) {
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	if (vertex_sgpr_offset >= 0x10 || instance_sgpr_offset >= 0x10) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndexIndirectMulti(
 	    cmdbuf, size, data_offset, max_count, shader_stage,
 	    (uint8_t)vertex_sgpr_offset, (uint8_t)instance_sgpr_offset, f
@@ -851,8 +884,10 @@ int PS4_SYSV_ABI sceGnmDrawIndirectMulti(uint32_t* cmdbuf, uint32_t size,
                                              uint32_t vertex_sgpr_offset,
                                              uint32_t instance_sgpr_offset,
                                              uint32_t flags) {
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	if (vertex_sgpr_offset >= 0x10 || instance_sgpr_offset >= 0x10) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndirectMulti(
 	    cmdbuf, size, data_offset, max_count, shader_stage,
 	    (uint8_t)vertex_sgpr_offset, (uint8_t)instance_sgpr_offset, f
@@ -863,8 +898,10 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndexIndirectCountMulti(
     uint32_t* cmdbuf, uint32_t size, uint32_t data_offset, uint32_t max_count,
     uint64_t count_addr, uint32_t shader_stage, uint32_t vertex_sgpr_offset,
     uint32_t instance_sgpr_offset, uint32_t flags) {
-	SceGnmDrawFlags f;
-	*(uint32_t*)&f = flags;
+	if (vertex_sgpr_offset >= 0x10 || instance_sgpr_offset >= 0x10) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	SceGnmDrawFlags f = makedrawflags(flags);
 	return sceGnmDriverDrawIndexIndirectCountMulti(
 	    cmdbuf, size, data_offset, max_count, count_addr, shader_stage,
 	    (uint8_t)vertex_sgpr_offset, (uint8_t)instance_sgpr_offset, f
@@ -878,16 +915,16 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndexOffset(uint32_t* cmdbuf, uint32_t size,
 	/* DrawIndexOffset uses DRAW_INDEX_OFFSET_2 packet (9 dwords total).
 	 * flags packs SceGnmDrawFlags: bit 0 = predication, bits 29-31 = RT slice offset. */
 	const uint32_t maxdwords = 9;
-	if (!cmdbuf || size < maxdwords) {
+	if (!cmdbuf || size != maxdwords) {
 		return GNM_ERROR_CMD_FAILED;
 	}
-	const uint32_t predicate = flags & 1;
-	const uint32_t rtsliceoffset = (flags >> 29) & 0x7;
+	SceGnmDrawFlags f = makedrawflags(flags);
+	const uint32_t predicate = f.predication;
 	cmdbuf[0] = PKT3(PKT3_DRAW_INDEX_OFFSET_2, 4, predicate);
 	cmdbuf[1] = index_count;
 	cmdbuf[2] = index_offset;
 	cmdbuf[3] = index_count;
-	cmdbuf[4] = rtsliceoffset;
+	cmdbuf[4] = drawinitiator(f, 0);
 	cmdbuf[5] = PKT3(PKT3_NOP, 2, 0);
 	cmdbuf[6] = 0;
 	cmdbuf[7] = 0;

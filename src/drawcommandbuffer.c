@@ -19,7 +19,12 @@ static inline bool cmdcanfit(GnmCommandBuffer* cmd, uint32_t sizedwords) {
 			return false;
 		}
 		remainingdwords = cmd->endptr - cmd->cmdptr;
-		return sizedwords > remainingdwords;
+		if (sizedwords > remainingdwords) {
+			sceGnmWriteMsg(
+			    GNM_MSGSEV_ERR, "Command buffer resizing was too small"
+			);
+			return false;
+		}
 	}
 
 	return true;
@@ -30,11 +35,12 @@ static void setcontextregisterrange(
     uint32_t numvalues
 ) {
 	if (regaddr < SI_CONTEXT_REG_OFFSET ||
-	    regaddr + numvalues > SI_CONTEXT_REG_END) {
+	    numvalues > (SI_CONTEXT_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid context register 0x%x used",
 		    regaddr
 		);
+		return;
 	}
 
 	const uint32_t numdwords = 2 + numvalues;
@@ -64,7 +70,8 @@ static void setpersistentregisterrange(
     GnmCommandBuffer* cmd, uint32_t regaddr, const uint32_t* regvalues,
     uint32_t numvalues
 ) {
-	if (regaddr < SI_SH_REG_OFFSET || regaddr + numvalues > SI_SH_REG_END) {
+	if (regaddr < SI_SH_REG_OFFSET ||
+	    numvalues > (SI_SH_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid persistent register 0x%x used",
 		    regaddr
@@ -100,7 +107,7 @@ static void setuserregisterrange(
     uint32_t numvalues
 ) {
 	if (regaddr < CIK_UCONFIG_REG_OFFSET ||
-	    regaddr + numvalues > CIK_UCONFIG_REG_END) {
+	    numvalues > (CIK_UCONFIG_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid user config register 0x%x used",
 		    regaddr
@@ -922,7 +929,7 @@ static void setshregcompute(
     uint32_t numvalues
 ) {
 	if (regaddr < SI_SH_REG_OFFSET ||
-	    regaddr + numvalues > SI_SH_REG_END) {
+	    numvalues > (SI_SH_REG_END - regaddr) / sizeof(uint32_t)) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "Invalid SH register 0x%x used", regaddr
 		);
@@ -1231,21 +1238,19 @@ void sceGnmDrawCmdDrawIndexOffset(
 		return;
 	}
 
-	const uint32_t predicate = cmd->flags.predication_enabled ? 1 : 0;
-	cmd->cmdptr[0] =
-	    PKT3(PKT3_DRAW_INDEX_OFFSET_2, 4, predicate);
-	cmd->cmdptr[1] = indexcount;
-	cmd->cmdptr[2] = indexoffset;
-	cmd->cmdptr[3] = indexcount;
-	cmd->cmdptr[4] = modifier.rendertargetsliceoffset;
-
-	// Trailing NOP (3 data dwords)
-	cmd->cmdptr[5] = PKT3(PKT3_NOP, 2, 0);
-	cmd->cmdptr[6] = 0;
-	cmd->cmdptr[7] = 0;
-	cmd->cmdptr[8] = 0;
-
-	cmd->cmdptr += cmddwords;
+	const SceGnmDrawFlags flags = {
+	    .predication = cmd->flags.predication_enabled,
+	    .rendertargetsliceoffset = modifier.rendertargetsliceoffset,
+	};
+	const uint32_t rawflags =
+	    (flags.predication ? 1u : 0u) |
+	    (flags.rendertargetsliceoffset << 29);
+	int32_t res = sceGnmDrawIndexOffset(
+	    cmd->cmdptr, cmddwords, indexoffset, indexcount, rawflags
+	);
+	if (res == GNM_ERROR_OK) {
+		cmd->cmdptr += cmddwords;
+	}
 }
 
 void sceGnmDrawCmdSetPsInputUsage(
@@ -1828,6 +1833,7 @@ void sceGnmDrawCmdSetStreamOutBuffer(
     GnmCommandBuffer* cmd, uint32_t slot, uint64_t gpuaddr, uint32_t size,
     uint32_t stride
 ) {
+	(void)gpuaddr;
 	if (slot > 3) {
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR,

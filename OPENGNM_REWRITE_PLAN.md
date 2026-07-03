@@ -274,9 +274,10 @@ grep -rn "sceGnmSdma" /Users/bizkut/Downloads/PS5/homebrew/shadPS4/src/
 | Struct sizes | Binary-compatible | Verified (Phase 1) | — |
 | PM4 emission | Match firmware | Done (Phase 2) + RE'd (RE-1 to RE-4) | — |
 | Validation | Match firmware | Done (Phase 3: stubs return 0) | — |
-| Orbis backend | Firmware delegation | Done (Phase 3) | Full link test needs Docker |
-| Generic backend | Host testing | Done (Phase 4) | — |
+| Orbis backend | Firmware delegation | Source complete (Phase 3) | Docker/orbis link + PS4 smoke test pending |
+| Generic backend | Host testing | Done (Phase 4) | CMake + Make tests pass |
 | gpuaddr | AMD PAL math | Done (Phase 2) | — |
+| Regression tests | Host behavior + ABI edge cases | 50 passing | Hardware validation pending |
 
 **Proven algorithms to port (AMD PAL-derived, not rewrite from zero):**
 - gpuaddr / AddrLib surface computation: 4,164 LOC (AMD PAL-derived math)
@@ -500,13 +501,14 @@ since the stub split simplifies it.
 across both backends (orbis + generic). All 4 backend source files compile
 cleanly with `clang -c`.
 
-### Phase 5: Tests + Integration [DONE]
+### Phase 5: Tests + Integration [PARTIAL]
 
 Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) and 7.
+Host-side tests are complete; downstream integration and PS4 hardware validation remain.
 
 **Deliverables:**
 - `tests/test_surface.c` — gpuaddr surface computation (7 tests) ✅
-- `tests/test_drawcmd.c` — PM4 command buffer building (10 tests) ✅
+- `tests/test_drawcmd.c` — PM4 command buffer building + ABI regressions (16 tests) ✅
 - `tests/test_validate.c` — PM4 validation, generic backend (9 tests) ✅
 - `tests/test_api.c` — Call every sceGnm* category once (18 tests) ✅
 - `tests/test.h` — minimal test framework (utassert/utasserteq/test_suite) ✅
@@ -515,10 +517,35 @@ Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) a
 - Makefile: tests target ✅
 - Verify Eden builds against opengnm (update `video_core/CMakeLists.txt`) — TODO
 - Verify example programs compile against opengnm — TODO
+- Full OpenOrbis Docker/orbis link test — TODO
+- PS4 hardware smoke test for submit/draw/present paths — TODO
 
-**Gate P5:** All 44 tests pass on generic backend via both `cmake --build + ctest`
-and `make tests`. Eden integration and example compilation are deferred to the
-Eden-specific work (separate repo).
+**Gate P5A (PASSED):** All 50 host tests pass on generic backend via CMake/CTest,
+strict CMake warning build, and `build.sh tests` / Makefile.
+
+**Gate P5B (PENDING):** Eden links against opengnm, examples compile, OpenOrbis
+Docker/orbis link succeeds, and a PS4 smoke test executes a minimal draw/submit path.
+
+### Compatibility Audit: ABI and PM4 Edge Cases [DONE — 2026-07-03]
+
+Review pass against shadPS4 and firmware-derived behavior found and fixed:
+
+- Command-buffer resize callback logic (`cmdcanfit`) now only succeeds after the
+  callback actually provides enough space.
+- `sceGnmCmdAllocInside` now rounds byte sizes up to dwords, rejects non-power-of-two
+  alignments, and re-checks post-callback capacity.
+- Register range validation now uses byte ranges and aborts on invalid CONTEXT/SH/
+  UCONFIG ranges.
+- Generic draw packet builders preserve NEO render-target-slice bits in draw initiator
+  fields and reject null index addresses.
+- Public indirect-draw wrappers now reject out-of-range SGPR offsets before truncation.
+- `sceGnmDrawIndexOffset` now requires the firmware-compatible exact size of 9 dwords.
+- `sceGnmDrawCmdDrawIndexOffset` delegates to the ABI-aware driver path.
+- `build.sh` generated configs include `-I./src`, and Makefile compile loops fail fast.
+
+Regression coverage added in `tests/test_drawcmd.c` for callback growth, small
+`AllocInside`, exact DrawIndexOffset sizing, null index address rejection, SGPR offset
+rejection, and NEO slice-bit preservation.
 
 ---
 
@@ -595,8 +622,10 @@ Eden-specific work (separate repo).
 | Missing firmware symbol at link | Med | Med | Declare externs; link test on orbis |
 | Struct layout drift | Low | High | `_Static_assert` every struct size |
 | OpenOrbis header conflict | Med | Med | Don't include `orbis/_types/gnm.h` |
-| RE-5 (InitDefaultHardwareState blob) incomplete | — | — | RE-5 DONE — blob fully extracted |
-| Eden migration breaks builds | Med | Med | Gate P5: verify Eden links |
+| Orbis link/runtime mismatch | Med | High | Gate P5B: Docker/orbis link + PS4 smoke test |
+| Host backend PM4 edge-case drift | Med | High | Regression tests + shadPS4/firmware diffs |
+| Stream-out buffer base address incomplete | Med | Med | RE `STRMOUT_BUFFER_UPDATE`/base-address behavior before wiring |
+| Eden migration breaks builds | Med | Med | Gate P5B: verify Eden links |
 | Debugger stubs wrong error codes | Low | Low | Match `ORBIS_GNM_ERROR_*` |
 
 ---
@@ -608,7 +637,11 @@ Eden-specific work (separate repo).
 2. **Phase 2 (DONE)** — Core implementation. 24 source files, libopengnm.a builds.
 3. **Phase 3 (DONE)** — Runtime delegation (orbis backend). 74 real externs + 14 sceGnmDriver* wrappers + 172 retail stubs + 11 validate stubs + 2 platform functions.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
-5. **Phase 5 (DONE)** — Tests (44 tests, all passing). Eden integration deferred.
+5. **Phase 5A (DONE)** — Host tests (50 tests, all passing via CMake/CTest and Makefile).
+6. **Phase 5B (NEXT)** — OpenOrbis/orbis link test, PS4 smoke test, Eden link, example compilation.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
-After Phase 5, it's validated. opengnm-psbc (shader compiler) resumes after Phase 5.
+After Phase 5A, host behavior is regression-tested. After Phase 5B, opengnm is
+validated as a downstream PS4 SDK replacement. opengnm-psbc (shader compiler) can
+resume in parallel with Phase 5B, but hardware findings should feed back into both
+projects.

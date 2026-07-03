@@ -35,7 +35,7 @@ static TestResult test_api_draw(void) {
 	int32_t r = sceGnmDrawIndexAuto(s_cmdbuf, 7, 1024, 0);
 	utassert(r == GNM_ERROR_OK || r == GNM_ERROR_CMD_FAILED);
 
-	r = sceGnmDrawIndexOffset(s_cmdbuf, 16, 0, 64, 0);
+	r = sceGnmDrawIndexOffset(s_cmdbuf, 9, 0, 64, 0);
 	utassert(r == GNM_ERROR_OK || r == GNM_ERROR_CMD_FAILED);
 	return test_success();
 }

@@ -14,6 +14,7 @@
 #include "gnm_shader.h"
 #include "gnm_types.h"
 #include "gnmdriver.h"
+#include "platform.h"
 #include "pm4/sid.h"
 
 /* PM4 header field extractors */
@@ -23,6 +24,19 @@
 #define PKT3_PRED(x)    ((x) & 0x1)
 
 static uint32_t s_cmdbuf[4096];
+static uint32_t s_resizebuf[32];
+
+static bool grow_callback(
+    GnmCommandBuffer* cmd, uint32_t sizedwords, void* userdata
+) {
+	uint32_t* buf = userdata;
+	(void)sizedwords;
+	cmd->beginptr = buf;
+	cmd->cmdptr = buf;
+	cmd->endptr = buf + 32;
+	cmd->sizedwords = 32;
+	return true;
+}
 
 static GnmCommandBuffer new_cmdbuf(void) {
 	GnmCommandBuffer cmd = sceGnmCmdInit(
@@ -89,6 +103,35 @@ static TestResult test_drawindexauto_predicated(void) {
 	/* Predication bit should be set in the header */
 	utasserteq((long long)PKT3_PRED(s_cmdbuf[0]), 1LL);
 	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_DRAW_INDEX_AUTO);
+	return test_success();
+}
+
+static TestResult test_drawcmd_callback_resize(void) {
+	uint32_t tiny[1] = {0};
+	memset(s_resizebuf, 0, sizeof(s_resizebuf));
+	GnmCommandCallbackFunc cb = grow_callback;
+	GnmCommandBuffer cmd = sceGnmCmdInit(
+	    tiny, sizeof(tiny), &cb, s_resizebuf
+	);
+
+	sceGnmDrawCmdDrawIndexAuto(&cmd, 64);
+
+	utassert(cmd.beginptr == s_resizebuf);
+	utasserteq((long long)cmd_dwords_used(&cmd), 7LL);
+	utasserteq((long long)PKT3_OPCODE(s_resizebuf[0]), (long long)PKT3_DRAW_INDEX_AUTO);
+	return test_success();
+}
+
+static TestResult test_cmdallocinside_small_size(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	void* ptr = sceGnmCmdAllocInside(&cmd, 1, 4);
+
+	utassert(ptr == &s_cmdbuf[1]);
+	utasserteq((long long)cmd_dwords_used(&cmd), 2LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_NOP);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 0LL);
 	return test_success();
 }
 
@@ -187,16 +230,60 @@ static TestResult test_drawindexoffset(void) {
 	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
 	/* flags: predication=1, RT slice offset=3 (bits 29-31) */
 	uint32_t flags = 1 | (3u << 29);
-	int32_t res = sceGnmDrawIndexOffset(s_cmdbuf, 16, 0x100, 256, flags);
+	int32_t res = sceGnmDrawIndexOffset(s_cmdbuf, 9, 0x100, 256, flags);
 	utasserteq((long long)res, (long long)GNM_ERROR_OK);
 
 	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_DRAW_INDEX_OFFSET_2);
 	utasserteq((long long)PKT3_PRED(s_cmdbuf[0]), 1LL);
 	utasserteq((long long)s_cmdbuf[1], 256LL);   /* index count */
 	utasserteq((long long)s_cmdbuf[2], 0x100LL); /* index offset */
-	utasserteq((long long)s_cmdbuf[4], 3LL);     /* RT slice offset */
+	utasserteq((long long)s_cmdbuf[4], 0LL);     /* base mode has no RT slice bits */
 	/* cmdbuf[5] = trailing NOP */
 	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[5]), (long long)PKT3_NOP);
+	return test_success();
+}
+
+static TestResult test_drawindexoffset_rejects_large_size(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+
+	int32_t res = sceGnmDrawIndexOffset(s_cmdbuf, 16, 0x100, 256, 0);
+
+	utassert(res != GNM_ERROR_OK);
+	return test_success();
+}
+
+static TestResult test_drawindex_rejects_null_indexaddr(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+
+	int32_t res = sceGnmDrawIndex(s_cmdbuf, 10, 256, 0, 0, 0);
+
+	utassert(res != GNM_ERROR_OK);
+	return test_success();
+}
+
+static TestResult test_drawindirect_rejects_truncated_sgpr_offsets(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+
+	int32_t res = sceGnmDrawIndirect(
+	    s_cmdbuf, 9, 0, GNM_STAGE_VS, 0x100, 0, 0
+	);
+
+	utassert(res != GNM_ERROR_OK);
+	return test_success();
+}
+
+static TestResult test_drawindexoffset_neo_slice_bits(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmPlatParams neo = {.gpumode = GNM_GPU_NEO};
+	GnmPlatParams base = {.gpumode = GNM_GPU_BASE};
+	sceGnmPlatInit(&neo);
+
+	const uint32_t flags = 1 | (3u << 29);
+	int32_t res = sceGnmDrawIndexOffset(s_cmdbuf, 9, 0x100, 256, flags);
+
+	sceGnmPlatInit(&base);
+	utasserteq((long long)res, (long long)GNM_ERROR_OK);
+	utasserteq((long long)s_cmdbuf[4], (long long)(3u << 29));
 	return test_success();
 }
 
@@ -205,6 +292,8 @@ int run_tests_drawcmd(void) {
 	    {test_drawindexauto, "DrawIndexAuto PM4"},
 	    {test_drawindex, "DrawIndex PM4"},
 	    {test_drawindexauto_predicated, "DrawIndexAuto predicated"},
+	    {test_drawcmd_callback_resize, "DrawCmd callback resize"},
+	    {test_cmdallocinside_small_size, "CmdAllocInside small size"},
 	    {test_setvsshader_driver, "SetVsShader driver"},
 	    {test_setpsshader_driver, "SetPsShader driver"},
 	    {test_drawinithwstate, "DrawInitDefaultHardwareState350"},
@@ -212,6 +301,10 @@ int run_tests_drawcmd(void) {
 	    {test_setvgtcontrol, "SetVgtControl"},
 	    {test_setvgtcontrol_invalid, "SetVgtControl invalid args"},
 	    {test_drawindexoffset, "DrawIndexOffset"},
+	    {test_drawindexoffset_rejects_large_size, "DrawIndexOffset rejects large size"},
+	    {test_drawindex_rejects_null_indexaddr, "DrawIndex rejects null index address"},
+	    {test_drawindirect_rejects_truncated_sgpr_offsets, "DrawIndirect rejects truncated SGPR offsets"},
+	    {test_drawindexoffset_neo_slice_bits, "DrawIndexOffset Neo slice bits"},
 	};
 	return test_suite(
 	    "drawcmd/PM4", tests, sizeof(tests) / sizeof(tests[0])

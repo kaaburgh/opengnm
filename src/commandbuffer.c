@@ -53,6 +53,13 @@ void* sceGnmCmdAllocInside(
 		);
 		return 0;
 	}
+	if (alignment & (alignment - 1)) {
+		sceGnmWriteMsg(
+		    GNM_MSGSEV_ERR,
+		    "AllocInside: alignment must be a power of two"
+		);
+		return 0;
+	}
 
 	const uint32_t startoff =
 	    (cmd->cmdptr - cmd->beginptr + 1) * sizeof(uint32_t);
@@ -60,13 +67,20 @@ void* sceGnmCmdAllocInside(
 	    (startoff + (alignment - 1)) & (~(alignment - 1));
 
 	const uint32_t aligndwords = (alignoff - startoff) / sizeof(uint32_t);
-	const uint32_t numdwords = 1 + aligndwords + (size / sizeof(uint32_t));
+	const uint32_t sizedwords = (size + sizeof(uint32_t) - 1) / sizeof(uint32_t);
+	const uint32_t numdwords = 1 + aligndwords + sizedwords;
 	if (cmd->cmdptr + numdwords > cmd->endptr) {
 		if (!cmd->callback.func(
 			cmd, numdwords, cmd->callback.userdata
 		    )) {
 			sceGnmWriteMsg(
 			    GNM_MSGSEV_ERR, "AllocInside: out of memory"
+			);
+			return 0;
+		}
+		if (cmd->cmdptr + numdwords > cmd->endptr) {
+			sceGnmWriteMsg(
+			    GNM_MSGSEV_ERR, "AllocInside: resized buffer is too small"
 			);
 			return 0;
 		}

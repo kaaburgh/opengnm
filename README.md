@@ -23,8 +23,11 @@ against opengnm unmodified.
 
 ## Status
 
-Phases 1-4 complete. All 207+ `sceGnm*` functions implemented across both
-backends. Generic build compiles with zero warnings (`-Wall -Wextra -Wpedantic`).
+Phases 1-4 and Phase 5A are complete. All 207+ `sceGnm*` functions are
+implemented across both backends, and the generic host backend passes 50 tests
+via CMake/CTest and Makefile. Remaining gates are OpenOrbis/orbis link testing,
+PS4 hardware smoke testing, Eden linkage, and example compilation.
+
 See `OPENGNM_REWRITE_PLAN.md` for the full plan and progress.
 
 ## Building

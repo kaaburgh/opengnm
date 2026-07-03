@@ -60,7 +60,7 @@ all: lib
 
 lib:
 ifneq ($(OPENGNM_SRCS),)
-	@for src in $(OPENGNM_SRCS); do \
+	@set -e; for src in $(OPENGNM_SRCS); do \
 		obj=$$(echo $$src | sed 's/\.c$$/.o/') ; \
 		dir=$$(dirname $$obj) ; \
 		mkdir -p $$dir ; \
@@ -97,7 +97,7 @@ TEST_BIN = opengnm_tests
 
 tests: lib
 	@echo "CC  tests"
-	@for src in $(TEST_SRCS); do \
+	@set -e; for src in $(TEST_SRCS); do \
 		obj=$$(echo $$src | sed 's/\.c$$/.o/') ; \
 		dir=$$(dirname $$obj) ; \
 		mkdir -p $$dir ; \
