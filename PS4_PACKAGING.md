@@ -42,7 +42,7 @@ Advanced OpenGNM matrix packages staged to `/data/pkg` on 2026-07-04:
 
 | Title ID | Package | SHA-256 | Hardware result |
 |---|---|---|---|
-| `FGNM00000` | `IV0000-FGNM00000_00-TRIANGLESAMPLE00.pkg` | `d57f5550d6e29a53313a91a7025f79bb60877b990eca21b2d8941ff23e34a69b` | Pending install/launch |
+| `FGNM00000` | `IV0000-FGNM00000_00-TRIANGLESAMPLE00.pkg` | `d57f5550d6e29a53313a91a7025f79bb60877b990eca21b2d8941ff23e34a69b` | PASS: visible triangle sample at 60 FPS |
 | `FGNM00008` | `IV0000-FGNM00008_00-EDENCOMPOSITEDMA.pkg` | `2a0ea27e56ff0e3b9c7f47efc4632e7024b53409f349d3bd62f015a6c46d5aa9` | Pending install/launch |
 | `FGNM00009` | `IV0000-FGNM00009_00-EDENCOMPOSITEBLT.pkg` | `da50b62751e3a8399324636058dc76a0104dcc2e5a246a063e9bcff99e1184c0` | Pending install/launch |
 | `FGNM00011` | `IV0000-FGNM00011_00-EDENTRIWRAPPER00.pkg` | `fb621085e4b0bbd93ccc79340c5ce4f9c5231083fb8cdfc723db755b6f9d8dc7` | Pending install/launch |

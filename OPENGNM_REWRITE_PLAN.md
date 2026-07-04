@@ -598,8 +598,9 @@ logs are useful when a package fails.
   Docker/OpenOrbis environment so it cannot accidentally link a host-built
   `libopengnm.a`.
 - All four packages are staged to `/data/pkg` on the PS4 FTP server.
-- Hardware install/launch results are still pending for the four advanced
-  packages.
+- `FGNM00000` triangle passed on hardware at 60 FPS.
+- Hardware install/launch results are still pending for `FGNM00008`,
+  `FGNM00009`, and `FGNM00011`.
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
