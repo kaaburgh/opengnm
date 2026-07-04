@@ -569,10 +569,11 @@ with scrolling white bar and digit `0`, confirming the EOP label write after
 also passes with the OpenOrbis v0.5.4 LLVM 18 SDK; the verified package SHA-256
 is `f49f68212c21d378689c913610bf49ba8f1f4d8325f3d8c78c31da0ab330e358`.
 
-**Phase 5C: Hardware hardening package matrix [NEXT]**
+**Phase 5C: Hardware hardening package matrix [IN PROGRESS]**
 
-OpenGNM has one confirmed PS4 hardware smoke pass, but it is not widely tested
-enough to become Eden's default GPU library yet. Before switching Eden from
+OpenGNM has confirmed PS4 hardware passes across the submit/EOP smoke test and
+the first advanced package matrix, but it still needs repeat-launch stability
+checks before becoming Eden's default GPU library. Before switching Eden from
 freegnm to OpenGNM, validate a small package matrix on hardware:
 
 - Submit/EOP smoke: existing `tests/hardware_smoke.c`, repeated after cold boot
@@ -599,8 +600,14 @@ logs are useful when a package fails.
   `libopengnm.a`.
 - All four packages are staged to `/data/pkg` on the PS4 FTP server.
 - `FGNM00000` triangle passed on hardware at 60 FPS.
-- Hardware install/launch results are still pending for `FGNM00008`,
-  `FGNM00009`, and `FGNM00011`.
+- `FGNM00008` composite DMA passed on hardware: tiles slowly flipping, scrolling
+  top bar, 4.61 FPS.
+- `FGNM00009` composite blit passed on hardware: tiles slowly flipping,
+  scrolling top bar, 5 FPS.
+- `FGNM00011` renderer-draw wrapper passed on hardware: orange gradient
+  triangle, 60 FPS.
+- Repeated second-launch/freeze checks are still pending for the OpenGNM-linked
+  advanced packages.
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
@@ -763,7 +770,7 @@ semantic expectations in one failure message.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
 5. **Phase 5A (DONE)** — Host tests (54 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
-7. **Phase 5C (NEXT)** — Hardware hardening package matrix: submit/EOP, triangle, composite blit, composite DMA, renderer-draw wrapper, repeated launch stability, and crash logs.
+7. **Phase 5C (IN PROGRESS)** — Hardware hardening package matrix: submit/EOP, triangle, composite blit, composite DMA, renderer-draw wrapper, repeated launch stability, and crash logs.
 8. **RPCSX cross-audit (NEXT)** — Compare PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4 side by side.
 9. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
 
