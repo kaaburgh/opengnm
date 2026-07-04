@@ -100,6 +100,14 @@ alone.
 **Cross-reference sources:**
 - `shadPS4/src/core/libraries/gnmdriver/gnmdriver.h` — 207 `sceGnm*` function signatures
 - `shadPS4/src/core/libraries/gnmdriver/gnm_error.h` — Sony error code constants
+- `../rpcsx/rpcsx/gpu/lib/gnm/include/gnm/pm4.hpp` — secondary PM4 opcode
+  semantics, especially queue/system packets plus graphics packets
+- `../rpcsx/rpcsx/gpu/Pipe.cpp` + `DeviceCtl.cpp` — secondary reference for
+  EOP writes, flip-on-EOP matching, and DMA_DATA mode behavior
+- `../rpcsx/rpcsx/gpu/Registers.hpp` — typed MMIO/register layout and default
+  state cross-checks
+- `../rpcsx/rpcsx/gpu/lib/amdgpu-tiler/include/amdgpu/tiler.hpp` — independent
+  AMD tiling reference for gpuaddr edge cases
 - `../OrbisNet/aerolib.csv` — 97,623 NID→symbol mappings for IDA/Ghidra/r2
 - `../OpenOrbis/ps4libdoc/known_names.txt` — 219 known `sceGnm*` NIDs
 - `mesa/src/amd/common/sid.h` — AMD GCN register definitions (gfx6-gfx12)
@@ -241,6 +249,10 @@ The RE phase produces verified documentation that Phases 2-6 implement against:
 5. Runtime verification FIFTH — on PS4 via ps4debug/GoldHEN
    └─ Read GPU memory to verify static analysis
    └─ Patch submit path to log command buffers if needed
+
+6. RPCSX cross-audit SIXTH — secondary semantic comparison only
+   └─ Compare broad PM4 opcode handling, EOP/flip, DMA_DATA, register defaults
+   └─ Keep shadPS4 + firmware RE as authority for Sony ABI and libSceGnmDriver behavior
 ```
 
 ### RE Workflow for Remaining Gaps (RE-5, RE-7, RE-8, RE-9)
@@ -551,6 +563,27 @@ hardware run succeed. The visible result was a full-screen green status view
 with scrolling white bar and digit `0`, confirming the EOP label write after
 `sceGnmSubmitCommandBuffers`/`sceGnmSubmitDone`.
 
+**Phase 5C: Hardware hardening package matrix [NEXT]**
+
+OpenGNM has one confirmed PS4 hardware smoke pass, but it is not widely tested
+enough to become Eden's default GPU library yet. Before switching Eden from
+freegnm to OpenGNM, validate a small package matrix on hardware:
+
+- Submit/EOP smoke: existing `tests/hardware_smoke.c`, repeated after cold boot
+  and second launch.
+- Triangle draw: freegnm-compatible triangle linked with `USE_OPENGNM=1`.
+- Composite blit: `freegnm-examples/eden-composite-blit` linked with OpenGNM.
+- Composite DMA: `freegnm-examples/eden-composite-dma` linked with OpenGNM.
+- Renderer-draw wrapper: `freegnm-examples/eden-triangle-wrapper` linked with
+  OpenGNM, including repeated second-run/freeze checks.
+- Crash logging: every package should use the existing log-file pattern and
+  record stage, PM4 packet counts, EOP label values, submit return codes, flip
+  requests, and frame counters before and after submit.
+
+**Gate P5C:** packages are installable, visible output matches the expected
+smoke visuals, repeated second launches do not freeze the console, and crash
+logs are useful when a package fails.
+
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
 `GnmCommandBuffer`, `gpaFindOptimalSurface`, etc.). opengnm now provides
@@ -589,6 +622,33 @@ Review pass against shadPS4 and firmware-derived behavior found and fixed:
 Regression coverage added in `tests/test_drawcmd.c` for callback growth, small
 `AllocInside`, exact DrawIndexOffset sizing, null index address rejection, SGPR offset
 rejection, and NEO slice-bit preservation.
+
+### RPCSX Cross-Audit Plan [NEXT]
+
+RPCSX is a useful secondary GPU-driver reference for PM4 semantics and tiling,
+but shadPS4 remains the primary authority for PS4 GNM ABI, `sceGnm*` behavior,
+Liverpool state, queue submission, and presenter integration. RPCSX does not
+appear to implement `libSceGnmDriver` exports directly and still has no-op/TODO
+areas around queue switching/mapping, 64-bit wait-reg-mem behavior, predication,
+and parts of event handling.
+
+OpenGNM should add a side-by-side audit pass against shadPS4 and RPCSX for:
+
+- `EVENT_WRITE_EOP` and `RELEASE_MEM`: EOP data/address encoding, interrupt
+  bits, cache-action bits, and value matching.
+- Flip-on-EOP behavior: delayed flip completion and EOP label sequencing.
+- `DMA_DATA`: memory/register/GDS source and destination modes, cache
+  flush/invalidate hooks, and constant-source fill behavior.
+- `WRITE_DATA` and `WAIT_REG_MEM`: register/memory selector handling,
+  unsupported selector rejection, and 32-bit vs 64-bit wait behavior.
+- Register default init packets: compare typed MMIO layout and default hardware
+  state writes against firmware RE and shadPS4.
+- gpuaddr tiling: compare OpenGNM surface calculations with RPCSX's independent
+  AMD tiler for edge cases not covered by the current host tests.
+
+Recommended test output: expand OpenGNM PM4 tests so each audited packet can
+dump expected dwords from firmware/shadPS4 notes, OpenGNM output, and RPCSX
+semantic expectations in one failure message.
 
 ---
 
@@ -668,6 +728,8 @@ rejection, and NEO slice-bit preservation.
 | OpenOrbis header conflict | Med | Med | Don't include `orbis/_types/gnm.h` |
 | Orbis runtime mismatch | Low | High | Gate P5B passed on hardware: package launch reached green code `0` after submit/EOP |
 | Host backend PM4 edge-case drift | Med | High | Regression tests + shadPS4/firmware diffs |
+| Hardware coverage too narrow | Med | High | Phase 5C package matrix before Eden defaults to OpenGNM |
+| RPCSX behavior differs from real PS4 ABI | Med | Med | Use RPCSX only as secondary semantic audit; shadPS4 + firmware RE remain authority |
 | Stream-out buffer base address incomplete | Med | Med | RE `STRMOUT_BUFFER_UPDATE`/base-address behavior before wiring |
 | Eden/freegnm downstream migration breaks builds | Med | Med | Source-only aliases cover core headers, triangle, eden-composite-blit, eden-composite-dma, and eden-triangle-wrapper; tooling-only headers still need migration |
 | Debugger stubs wrong error codes | Low | Low | Match `ORBIS_GNM_ERROR_*` |
@@ -683,11 +745,14 @@ rejection, and NEO slice-bit preservation.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
 5. **Phase 5A (DONE)** — Host tests (54 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
-7. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
+7. **Phase 5C (NEXT)** — Hardware hardening package matrix: submit/EOP, triangle, composite blit, composite DMA, renderer-draw wrapper, repeated launch stability, and crash logs.
+8. **RPCSX cross-audit (NEXT)** — Compare PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4 side by side.
+9. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
 After Phase 5A, host behavior is regression-tested. After Phase 5B, the
 OpenOrbis linker path, installable package path, VideoOut presentation path, and
-GNM submit/EOP path are verified on PS4 hardware. The first downstream adapter
-unit is in place; opengnm-psbc (shader compiler) and migration of old tooling
-headers can continue with the hardware smoke gate closed.
+GNM submit/EOP path are verified on PS4 hardware. Phase 5C broadens that into a
+small reusable-GPU-API confidence matrix before Eden defaults to OpenGNM. The
+first downstream adapter unit is in place; opengnm-psbc (shader compiler) and
+migration of old tooling headers can continue while the hardware matrix runs.
