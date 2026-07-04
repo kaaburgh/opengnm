@@ -9,6 +9,7 @@ int run_tests_drawcmd(void);
 int run_tests_validate(void);
 int run_tests_api(void);
 int run_tests_compat(void);
+int run_tests_pm4(void);
 
 int main(void) {
 	printf("=== opengnm test suite ===\n\n");
@@ -19,6 +20,7 @@ int main(void) {
 	failed += run_tests_validate();
 	failed += run_tests_api();
 	failed += run_tests_compat();
+	failed += run_tests_pm4();
 
 	printf("=== Summary ===\n");
 	if (failed == 0) {

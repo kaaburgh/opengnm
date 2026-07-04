@@ -118,7 +118,7 @@ static inline Pm4Error parse_pkt3(Pm4Decoder* ctx, Pm4Packet3* pkt) {
 		    ctx->cmdcur[4] | ((uint64_t)ctx->cmdcur[5] << 32);
 		pkt->dma_data.length = G_415_BYTE_COUNT_GFX6(ctx->cmdcur[6]);
 		pkt->dma_data.wr_confirm =
-		    G_415_DISABLE_WR_CONFIRM_GFX9(ctx->cmdcur[6]) != 0;
+		    G_415_DISABLE_WR_CONFIRM_GFX6(ctx->cmdcur[6]) == 0;
 		break;
 	case PKT3_ACQUIRE_MEM:
 		if (count < 5) {

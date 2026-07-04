@@ -94,7 +94,8 @@ TEST_SRCS = \
 	tests/test_drawcmd.c \
 	tests/test_validate.c \
 	tests/test_api.c \
-	tests/test_compat.c
+	tests/test_compat.c \
+	tests/test_pm4.c
 
 TEST_BIN = opengnm_tests
 TEST_OBJS = $(TEST_SRCS:.c=.o)
