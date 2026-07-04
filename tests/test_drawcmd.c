@@ -24,6 +24,8 @@
 #define PKT3_OPCODE(x)  (((x) >> 8) & 0xFF)
 #define PKT3_PRED(x)    ((x) & 0x1)
 
+#define PM4_EVENT_TYPE_ZPASS_DONE 0x15
+
 static uint32_t s_cmdbuf[4096];
 static uint32_t s_resizebuf[32];
 
@@ -288,6 +290,121 @@ static TestResult test_drawindexoffset_neo_slice_bits(void) {
 	return test_success();
 }
 
+static TestResult test_event_write_eop_data64_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdEventWriteEop(
+	    &cmd, GNM_CACHE_FLUSH_AND_INV_TS_EVENT, 0x0000000123456780ULL,
+	    GNM_DATA_SEL_SEND_DATA64, 0x1122334455667788ULL
+	);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 6LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_EVENT_WRITE_EOP);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 4LL);
+	utasserteq(
+	    (long long)s_cmdbuf[1],
+	    (long long)(EVENT_TYPE(GNM_CACHE_FLUSH_AND_INV_TS_EVENT) | EVENT_INDEX(5))
+	);
+	utasserteq((long long)s_cmdbuf[2], 0x23456780LL);
+	utasserteq(
+	    (long long)s_cmdbuf[3],
+	    (long long)(0x1 | EOP_DATA_SEL(GNM_DATA_SEL_SEND_DATA64) |
+			EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM))
+	);
+	utasserteq((long long)s_cmdbuf[4], 0x55667788LL);
+	utasserteq((long long)s_cmdbuf[5], 0x11223344LL);
+	return test_success();
+}
+
+static TestResult test_event_write_eop_rejects_high_address(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdEventWriteEop(
+	    &cmd, GNM_CACHE_FLUSH_AND_INV_TS_EVENT, 0x0001000000000000ULL,
+	    GNM_DATA_SEL_SEND_DATA64, 0
+	);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 0LL);
+	return test_success();
+}
+
+static TestResult test_waitmem_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdWaitMem(
+	    &cmd, GNM_WAIT_REG_MEM_FUNC_NOT_EQUAL, 0x0000000123456780ULL,
+	    0xabcdef01, 0xff00ff00
+	);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 7LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_WAIT_REG_MEM);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 5LL);
+	utasserteq(
+	    (long long)s_cmdbuf[1],
+	    (long long)(GNM_WAIT_REG_MEM_FUNC_NOT_EQUAL | WAIT_REG_MEM_MEM_SPACE(1))
+	);
+	utasserteq((long long)s_cmdbuf[2], 0x23456780LL);
+	utasserteq((long long)s_cmdbuf[3], 0x1LL);
+	utasserteq((long long)s_cmdbuf[4], 0xabcdef01LL);
+	utasserteq((long long)s_cmdbuf[5], 0xff00ff00LL);
+	utasserteq((long long)s_cmdbuf[6], 4LL);
+	return test_success();
+}
+
+static TestResult test_wait_graphics_write_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdWaitGraphicsWrite(
+	    &cmd, GNM_ACQUIRE_TARGET_CB0 | GNM_ACQUIRE_TARGET_DB
+	);
+
+	const uint32_t expected_coher =
+	    GNM_ACQUIRE_TARGET_CB0 | GNM_ACQUIRE_TARGET_DB |
+	    S_0301F0_CB_ACTION_ENA(1) | S_0301F0_DB_ACTION_ENA(1) |
+	    S_0301F0_TCL1_VOL_ACTION_ENA(1) |
+	    S_0301F0_TC_VOL_ACTION_ENA(1) |
+	    S_0301F0_TC_WB_ACTION_ENA(1);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 7LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_ACQUIRE_MEM);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 5LL);
+	utasserteq((long long)s_cmdbuf[1], (long long)expected_coher);
+	utasserteq((long long)s_cmdbuf[2], 0xffffffffLL);
+	utasserteq((long long)s_cmdbuf[3], 0xffLL);
+	utasserteq((long long)s_cmdbuf[4], 0LL);
+	utasserteq((long long)s_cmdbuf[5], 0LL);
+	utasserteq((long long)s_cmdbuf[6], 0xaLL);
+	return test_success();
+}
+
+static TestResult test_reset_query_zpass_eop_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdResetQuery(&cmd, 0x0000000100004000ULL);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 6LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_EVENT_WRITE_EOP);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 4LL);
+	utasserteq(
+	    (long long)s_cmdbuf[1],
+	    (long long)(EVENT_TYPE(PM4_EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1))
+	);
+	utasserteq((long long)s_cmdbuf[2], 0x4000LL);
+	utasserteq(
+	    (long long)s_cmdbuf[3],
+	    (long long)(0x1 | EOP_DATA_SEL(GNM_DATA_SEL_SEND_DATA32) |
+			EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM))
+	);
+	utasserteq((long long)s_cmdbuf[4], 0LL);
+	utasserteq((long long)s_cmdbuf[5], 0LL);
+	return test_success();
+}
+
 static TestResult test_depth_target_stencil_layout(void) {
 	const GnmDepthRenderTargetCreateInfo z24s8spec = {
 	    .width = 128,
@@ -397,6 +514,11 @@ int run_tests_drawcmd(void) {
 	    {test_drawindex_rejects_null_indexaddr, "DrawIndex rejects null index address"},
 	    {test_drawindirect_rejects_truncated_sgpr_offsets, "DrawIndirect rejects truncated SGPR offsets"},
 	    {test_drawindexoffset_neo_slice_bits, "DrawIndexOffset Neo slice bits"},
+	    {test_event_write_eop_data64_layout, "EventWriteEop DATA64 layout"},
+	    {test_event_write_eop_rejects_high_address, "EventWriteEop rejects high address"},
+	    {test_waitmem_layout, "WaitMem PM4 layout"},
+	    {test_wait_graphics_write_layout, "WaitGraphicsWrite PM4 layout"},
+	    {test_reset_query_zpass_eop_layout, "ResetQuery ZPASS EOP layout"},
 	    {test_depth_target_stencil_layout, "Depth target stencil layout"},
 	};
 	return test_suite(

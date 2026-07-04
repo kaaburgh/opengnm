@@ -1871,8 +1871,12 @@ void sceGnmDrawCmdSetStreamOutBuffer(
 
 /* ==================== Occlusion Queries ==================== */
 
+enum {
+	GNM_PM4_EVENT_TYPE_ZPASS_DONE = 0x15,
+};
+
 /* ZPASS_DONE occlusion query uses EVENT_WRITE_EOP with:
- * - event_type = 0x4 (CACHE_FLUSH_TS / ZPASS_DONE on gfx8)
+ * - event_type = 0x15 (ZPASS_DONE on gfx8)
  * - event_index = 1 (ZPASS_DONE index per AMD spec)
  * - data_sel = SEND_DATA32 (write 32-bit count to gpuaddr)
  *
@@ -1911,7 +1915,8 @@ static void writeZpassDoneEop(
 	                     EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
 
 	cmd->cmdptr[0] = PKT3(PKT3_EVENT_WRITE_EOP, 4, 0);
-	cmd->cmdptr[1] = EVENT_TYPE(0x4) | EVENT_INDEX(1);  /* ZPASS_DONE */
+	cmd->cmdptr[1] =
+	    EVENT_TYPE(GNM_PM4_EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1);
 	cmd->cmdptr[2] = gpuaddr & 0xffffffff;
 	cmd->cmdptr[3] = (highaddr & 0xffff) | sel;
 	cmd->cmdptr[4] = data;
