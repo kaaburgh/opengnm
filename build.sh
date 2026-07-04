@@ -10,6 +10,7 @@
 #   ./build.sh docker-link-smoke  — OpenOrbis Docker link smoke only
 #   ./build.sh docker-hardware-smoke — build PS4 hardware smoke ELF
 #   ./build.sh docker-hardware-pkg — build PS4 hardware smoke package
+#   ./build.sh macos-hardware-pkg — native macOS PS4 hardware smoke package
 #   ./build.sh stage-hardware-pkg  — build + upload hardware smoke package
 #   ./build.sh clean    — clean build directory
 #   ./build.sh shell    — open shell in Docker with SDK
@@ -24,6 +25,13 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CREATE_FSELF_SRC="${CREATE_FSELF_SRC:-$ROOT_DIR/../OpenOrbis/create-fself}"
 CREATE_GP4_SRC="${CREATE_GP4_SRC:-$ROOT_DIR/../OpenOrbis/create-gp4}"
 TMP_DIR=""
+
+require_macos() {
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        echo "This action is for native macOS builds only." >&2
+        exit 1
+    fi
+}
 
 require_go() {
     if ! command -v go >/dev/null 2>&1; then
@@ -128,6 +136,51 @@ LIB_LDFLAGS=-shared -m elf_x86_64 -L$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver
 EOF
 }
 
+write_macos_orbis_config() {
+    require_macos
+
+    local llvm_prefix="${LLVM18_PREFIX:-}"
+    if [[ -z "$llvm_prefix" ]]; then
+        llvm_prefix="$(brew --prefix llvm@18 2>/dev/null || true)"
+    fi
+    if [[ -z "$llvm_prefix" || ! -x "$llvm_prefix/bin/clang" ]]; then
+        echo "Homebrew llvm@18 is required. Run: brew install llvm@18" >&2
+        exit 1
+    fi
+
+    local sdk_root="${OO_PS4_TOOLCHAIN:-}"
+    if [[ -z "$sdk_root" ]]; then
+        sdk_root="$("$ROOT_DIR/tools/setup_openorbis_llvm18_macos.sh")"
+    fi
+    if [[ ! -f "$sdk_root/link.x" ]]; then
+        echo "Invalid OO_PS4_TOOLCHAIN: missing $sdk_root/link.x" >&2
+        exit 1
+    fi
+
+    export OO_PS4_TOOLCHAIN="$sdk_root"
+
+    cat > "$OPENGNM_DIR/config.mak" << EOF
+DESTDIR=/usr/local
+BINDIR=/bin
+INCDIR=/include
+LIBDIR=/lib
+LIBEXT=.so
+LIBVER=0.1.0
+PLATFORM=orbis
+TOOLCHAIN=$sdk_root
+AR=$llvm_prefix/bin/llvm-ar
+CC=$llvm_prefix/bin/clang
+LD=$llvm_prefix/bin/ld.lld
+CREATE_FSELF=$sdk_root/bin/macos/create-fself-macos
+CREATE_GP4=$sdk_root/bin/macos/create-gp4
+PKGTOOL=$sdk_root/bin/macos/PkgTool.Core
+RUNTIME_MODULE_DIR=$sdk_root/src/modules
+CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -I./src -O2 -g --target=x86_64-ps4-elf -fPIC -isysroot \$(TOOLCHAIN) -isystem \$(TOOLCHAIN)/include
+LDFLAGS=-m elf_x86_64 -L\$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -lSceVideoOut -L. -lopengnm
+LIB_LDFLAGS=-shared -m elf_x86_64 -L\$(TOOLCHAIN)/lib -lc -lkernel -lSceGnmDriver -lSceVideoOut -L. -lopengnm
+EOF
+}
+
 # Default action
 ACTION="${1:-all}"
 
@@ -176,11 +229,16 @@ case "$ACTION" in
         write_orbis_config
         run_docker_package_make
         ;;
+    macos-hardware-pkg)
+        write_macos_orbis_config
+        make clean >/dev/null 2>&1 || true
+        make hardware-smoke-pkg
+        ;;
     stage-hardware-pkg)
         "$OPENGNM_DIR/stage_hw_smoke_pkg.sh"
         ;;
     *)
-        echo "Usage: $0 {all|lib|headers|tests|clean|shell|docker-build|docker-link-smoke|docker-hardware-smoke|docker-hardware-pkg|stage-hardware-pkg}"
+        echo "Usage: $0 {all|lib|headers|tests|clean|shell|docker-build|docker-link-smoke|docker-hardware-smoke|docker-hardware-pkg|macos-hardware-pkg|stage-hardware-pkg}"
         exit 1
         ;;
 esac

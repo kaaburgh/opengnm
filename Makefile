@@ -132,6 +132,7 @@ CREATE_GP4 ?= $(TOOLCHAIN)/bin/linux/create-gp4
 PKGTOOL ?= $(TOOLCHAIN)/bin/linux/PkgTool.Core
 PKG_ASSET_DIR ?= ../freegnm-examples/videoout-linear
 RUNTIME_MODULES = sce_module/libc.prx sce_module/libSceFios2.prx
+RUNTIME_MODULE_DIR ?= $(TOOLCHAIN)/bin/data/modules
 PKG_FILES = eboot.bin sce_sys/about/right.sprx sce_sys/param.sfo sce_sys/icon0.png $(RUNTIME_MODULES)
 
 $(HW_SMOKE_OBJ): $(HW_SMOKE_SRC)
@@ -183,10 +184,10 @@ eboot.bin: $(HW_SMOKE_EXE)
 sce_module:
 	mkdir -p $@
 
-sce_module/libc.prx: $(TOOLCHAIN)/bin/data/modules/libc.prx | sce_module
+sce_module/libc.prx: $(RUNTIME_MODULE_DIR)/libc.prx | sce_module
 	cp $< $@
 
-sce_module/libSceFios2.prx: $(TOOLCHAIN)/bin/data/modules/libSceFios2.prx | sce_module
+sce_module/libSceFios2.prx: $(RUNTIME_MODULE_DIR)/libSceFios2.prx | sce_module
 	cp $< $@
 
 sce_sys/about:

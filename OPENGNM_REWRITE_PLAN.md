@@ -538,6 +538,9 @@ ABI without exporting a second binary ABI.
 - Makefile: `hardware-smoke` target for `PLATFORM=orbis` ✅
 - Makefile: `hardware-smoke-pkg` target for installable PS4 package ✅
 - Full OpenOrbis Docker/orbis build + link smoke (`./build.sh docker-build`) ✅
+- Native macOS package generation with OpenOrbis v0.5.4 LLVM 18 and Homebrew
+  `llvm@18`: `./build.sh macos-hardware-pkg` builds and validates
+  `IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg` ✅
 - Assess Eden/example direct-opengnm integration — DONE: adapter layer started;
   unsupported tooling-only old headers still need migration
 - `freegnm-examples/triangle`: `make -B USE_OPENGNM=1 tri` links against
@@ -561,7 +564,9 @@ strict CMake warning build, and `build.sh tests` / Makefile.
 hardware-smoke package generation, FTP staging to the configured PS4, and the
 hardware run succeed. The visible result was a full-screen green status view
 with scrolling white bar and digit `0`, confirming the EOP label write after
-`sceGnmSubmitCommandBuffers`/`sceGnmSubmitDone`.
+`sceGnmSubmitCommandBuffers`/`sceGnmSubmitDone`. Native macOS package generation
+also passes with the OpenOrbis v0.5.4 LLVM 18 SDK; the verified package SHA-256
+is `f49f68212c21d378689c913610bf49ba8f1f4d8325f3d8c78c31da0ab330e358`.
 
 **Phase 5C: Hardware hardening package matrix [NEXT]**
 

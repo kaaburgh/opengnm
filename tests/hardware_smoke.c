@@ -10,8 +10,6 @@
 #include "gnm_drawcommandbuffer.h"
 #include "gnmdriver.h"
 
-extern int sceKernelDebugOutText(int channel, const char* text);
-
 #ifndef ORBIS_KERNEL_WC_GARLIC
 #define ORBIS_KERNEL_WC_GARLIC 3
 #endif

@@ -21,6 +21,20 @@ The current hardware result, observed on 2026-07-03, is a full-screen green
 status view with a scrolling white bar at the top and a large digit `0`. That
 means VideoOut is presenting and the GNM submit/EOP path completed.
 
+Native macOS packaging is verified as of 2026-07-04 with the OpenOrbis v0.5.4
+LLVM 18 SDK and Homebrew `llvm@18`:
+
+```sh
+./build.sh macos-hardware-pkg
+```
+
+Verified package artifact:
+
+```text
+IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg
+SHA-256: f49f68212c21d378689c913610bf49ba8f1f4d8325f3d8c78c31da0ab330e358
+```
+
 ## Target Configuration Found
 
 The active Codex config does not contain a PS4 host. The project scripts and
@@ -42,6 +56,12 @@ optionally use PS4debug to send a notification.
 Host-side:
 
 - Docker image: `openorbisofficial/toolchain:latest`
+- Or native macOS:
+  - Homebrew `llvm@18`
+  - OpenOrbis v0.5.4 LLVM 18 SDK extracted by
+    `../tools/setup_openorbis_llvm18_macos.sh`
+  - SDK macOS helpers:
+    `bin/macos/create-fself-macos`, `bin/macos/create-gp4`, `bin/macos/PkgTool.Core`
 - Repository root: `/Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm`
 - OpenOrbis helper source directories, if the Docker image does not provide
   compatible helper binaries:
@@ -149,6 +169,16 @@ cp "$OO_PS4_TOOLCHAIN/bin/data/modules/libc.prx" sce_module/
 cp "$OO_PS4_TOOLCHAIN/bin/data/modules/libSceFios2.prx" sce_module/
 ```
 
+For the v0.5.4 LLVM 18 native SDK, the same PRXs live under:
+
+```sh
+$OO_PS4_TOOLCHAIN/src/modules/libc.prx
+$OO_PS4_TOOLCHAIN/src/modules/libSceFios2.prx
+```
+
+`Makefile` exposes this as `RUNTIME_MODULE_DIR`; the native macOS wrapper sets
+it to `$OO_PS4_TOOLCHAIN/src/modules`.
+
 Create `sce_sys` files. `icon0.png` and `right.sprx` can be copied from the
 existing local smoke example until opengnm has its own assets:
 
@@ -206,6 +236,34 @@ pattern:
 
 Use `--platform linux/amd64` for the current Docker image on Apple Silicon to
 avoid platform ambiguity.
+
+## Native macOS Wrapper
+
+The native wrapper avoids Docker and Ubuntu package setup:
+
+```sh
+cd /Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm/opengnm
+./build.sh macos-hardware-pkg
+```
+
+It does the following:
+
+1. Locates Homebrew `llvm@18`, or uses `LLVM18_PREFIX`.
+2. Locates the OpenOrbis v0.5.4 LLVM 18 SDK, or runs
+   `../tools/setup_openorbis_llvm18_macos.sh` if `OO_PS4_TOOLCHAIN` is unset.
+3. Writes `config.mak` with Homebrew `clang`, `ld.lld`, and `llvm-ar`.
+4. Uses SDK macOS helpers:
+   `create-fself-macos`, `create-gp4`, and `PkgTool.Core`.
+5. Uses `$OO_PS4_TOOLCHAIN/src/modules` for runtime PRXs.
+6. Builds and validates `IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg`.
+
+Useful overrides:
+
+```sh
+LLVM18_PREFIX=/opt/homebrew/opt/llvm@18
+OO_PS4_TOOLCHAIN=/path/to/OpenOrbis/PS4Toolchain
+RUNTIME_MODULE_DIR=/path/to/sce_module_prx_dir
+```
 
 ## Staging the Package to PS4
 
