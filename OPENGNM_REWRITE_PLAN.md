@@ -554,8 +554,9 @@ ABI without exporting a second binary ABI.
 - `freegnm-examples/eden-triangle-wrapper`: `make -B USE_OPENGNM=1
   eden_triangle_wrapper` links against `opengnm/libopengnm.a` in the OpenOrbis
   Docker environment ✅
-- PS4 hardware smoke test for submit/draw/present paths — PASS on 2026-07-03:
-  full-screen green with scrolling white bar and digit `0`
+- PS4 hardware smoke test for submit/draw/present paths — PASS on 2026-07-03
+  and reconfirmed on 2026-07-04: full-screen green with scrolling white bar and
+  digit `0`; GoldHEN reported about 3.15 FPS for the CPU-filled status presenter.
 
 **Gate P5A (PASSED):** All 54 host tests pass on generic backend via CMake/CTest,
 strict CMake warning build, and `build.sh tests` / Makefile.
@@ -588,6 +589,17 @@ freegnm to OpenGNM, validate a small package matrix on hardware:
 **Gate P5C:** packages are installable, visible output matches the expected
 smoke visuals, repeated second launches do not freeze the console, and crash
 logs are useful when a package fails.
+
+**Phase 5C build/staging status (2026-07-04):**
+
+- `FGNM00000` triangle, `FGNM00008` composite DMA, `FGNM00009` composite blit,
+  and `FGNM00011` renderer-draw wrapper all build with `USE_OPENGNM=1`.
+- Each builder now forces a clean PS4-target OpenGNM static library inside the
+  Docker/OpenOrbis environment so it cannot accidentally link a host-built
+  `libopengnm.a`.
+- All four packages are staged to `/data/pkg` on the PS4 FTP server.
+- Hardware install/launch results are still pending for the four advanced
+  packages.
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
