@@ -150,15 +150,15 @@ extern int32_t sceGnmDispatchIndirectOnMec(
 
 /* Submit functions */
 extern int32_t sceGnmSubmitCommandBuffers(
-    uint32_t count, const uint32_t* dcbgpuaddrs[], uint32_t* dcbsizes,
-    const uint32_t* ccbgpuaddrs[], uint32_t* ccbsizes);
+    uint32_t count, void* const dcbgpuaddrs[], uint32_t* dcbsizes,
+    void* const ccbgpuaddrs[], uint32_t* ccbsizes);
 extern int32_t sceGnmSubmitAndFlipCommandBuffers(
     uint32_t count, uint32_t* dcbgpuaddrs[], uint32_t* dcbsizes,
     uint32_t* ccbgpuaddrs[], uint32_t* ccbsizes, uint32_t vohandle,
     uint32_t bufidx, uint32_t flipmode, int64_t fliparg);
 extern int32_t sceGnmSubmitCommandBuffersForWorkload(
-    uint32_t workload, uint32_t count, const uint32_t* dcbgpuaddrs[],
-    uint32_t* dcbsizes, const uint32_t* ccbgpuaddrs[], uint32_t* ccbsizes);
+    uint32_t workload, uint32_t count, void* const dcbgpuaddrs[],
+    uint32_t* dcbsizes, void* const ccbgpuaddrs[], uint32_t* ccbsizes);
 extern int32_t sceGnmSubmitAndFlipCommandBuffersForWorkload(
     uint32_t workload, uint32_t count, uint32_t* dcbgpuaddrs[],
     uint32_t* dcbsizes, uint32_t* ccbgpuaddrs[], uint32_t* ccbsizes,

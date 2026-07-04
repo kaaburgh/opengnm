@@ -536,6 +536,9 @@ ABI without exporting a second binary ABI.
 - `freegnm-examples/eden-composite-dma`: `make -B USE_OPENGNM=1
   eden_composite_dma` links against `opengnm/libopengnm.a` in the OpenOrbis
   Docker environment ✅
+- `freegnm-examples/eden-triangle-wrapper`: `make -B USE_OPENGNM=1
+  eden_triangle_wrapper` links against `opengnm/libopengnm.a` in the OpenOrbis
+  Docker environment ✅
 - PS4 hardware smoke test for submit/draw/present paths — PASS on 2026-07-03:
   full-screen green with scrolling white bar and digit `0`
 
@@ -554,8 +557,8 @@ and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
 source-only aliases in `<compat/freegnm.h>` plus core `<gnm/...>` forwarding
 headers. This preserves the official `sceGnm*` / `sceGpa*` binary ABI because no
 exported `gnm*` or `gpa*` symbols are added. The `triangle`,
-`eden-composite-blit`, and `eden-composite-dma` examples have opt-in opengnm
-link paths. Consumers that
+`eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper`
+examples have opt-in opengnm link paths. Consumers that
 include old `gnm/pssl/*`, `gnm/gnf/*`, or other tool-layer headers still need
 source migration to opengnm's split tool libraries.
 
@@ -666,7 +669,7 @@ rejection, and NEO slice-bit preservation.
 | Orbis runtime mismatch | Low | High | Gate P5B passed on hardware: package launch reached green code `0` after submit/EOP |
 | Host backend PM4 edge-case drift | Med | High | Regression tests + shadPS4/firmware diffs |
 | Stream-out buffer base address incomplete | Med | Med | RE `STRMOUT_BUFFER_UPDATE`/base-address behavior before wiring |
-| Eden/freegnm downstream migration breaks builds | Med | Med | Source-only aliases cover core headers, triangle, eden-composite-blit, and eden-composite-dma; tooling-only headers still need migration |
+| Eden/freegnm downstream migration breaks builds | Med | Med | Source-only aliases cover core headers, triangle, eden-composite-blit, eden-composite-dma, and eden-triangle-wrapper; tooling-only headers still need migration |
 | Debugger stubs wrong error codes | Low | Low | Match `ORBIS_GNM_ERROR_*` |
 
 ---
@@ -680,7 +683,7 @@ rejection, and NEO slice-bit preservation.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
 5. **Phase 5A (DONE)** — Host tests (54 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
-7. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, and `eden-composite-dma` link with opengnm; migrate unsupported tool-layer includes next.
+7. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
 After Phase 5A, host behavior is regression-tested. After Phase 5B, the

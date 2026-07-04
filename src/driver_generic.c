@@ -1513,8 +1513,8 @@ int32_t PS4_SYSV_ABI sceGnmDispatchIndirectOnMec(uint32_t* cmdbuf,
 /* --- Submit functions (no real hardware on generic) --- */
 
 int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffers(
-    uint32_t count, const uint32_t* dcb_gpu_addrs[],
-    uint32_t* dcb_sizes_in_bytes, const uint32_t* ccb_gpu_addrs[],
+    uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
     uint32_t* ccb_sizes_in_bytes) {
 	(void)count;
 	(void)dcb_gpu_addrs;
@@ -1536,8 +1536,8 @@ int PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffers(
 }
 
 int PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload(
-    uint32_t workload, uint32_t count, const uint32_t* dcb_gpu_addrs[],
-    uint32_t* dcb_sizes_in_bytes, const uint32_t* ccb_gpu_addrs[],
+    uint32_t workload, uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
     uint32_t* ccb_sizes_in_bytes) {
 	(void)workload; (void)count; (void)dcb_gpu_addrs;
 	(void)dcb_sizes_in_bytes; (void)ccb_gpu_addrs; (void)ccb_sizes_in_bytes;

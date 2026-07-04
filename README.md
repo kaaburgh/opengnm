@@ -38,7 +38,8 @@ submit/EOP path. Eden and `freegnm-examples` currently consume the older `gnm*`
 wrapper API from `freegnm`; the first adapter layer now covers one-to-one core
 headers and wrapper names, and `freegnm-examples/triangle` plus
 `freegnm-examples/eden-composite-blit` and
-`freegnm-examples/eden-composite-dma` now link with `USE_OPENGNM=1`.
+`freegnm-examples/eden-composite-dma` plus the C++ wrapper target
+`freegnm-examples/eden-triangle-wrapper` now link with `USE_OPENGNM=1`.
 Consumers that include old tooling-only headers such as
 `gnm/pssl/*` or `gnm/gnf/*` still need migration to the split tool libraries.
 

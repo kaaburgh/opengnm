@@ -353,7 +353,7 @@ int main(void) {
                                GNM_DATA_SEL_SEND_DATA64, 0x4f50474e534d4b45ULL);
 
     const uint32_t dcb_size = (uint32_t)((uintptr_t)cmd.cmdptr - (uintptr_t)cmd.beginptr);
-    const uint32_t* dcb_addrs[1] = {cmd.beginptr};
+    void* dcb_addrs[1] = {cmd.beginptr};
     uint32_t dcb_sizes[1] = {dcb_size};
 
     log_step("opengnm smoke: submit command buffer");
