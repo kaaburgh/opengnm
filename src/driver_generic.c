@@ -1529,8 +1529,8 @@ int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffers(
 }
 
 int PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffers(
-    uint32_t count, uint32_t* dcb_gpu_addrs[],
-    uint32_t* dcb_sizes_in_bytes, uint32_t* ccb_gpu_addrs[],
+    uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
     uint32_t* ccb_sizes_in_bytes, uint32_t vo_handle, uint32_t buf_idx,
     uint32_t flip_mode, int64_t flip_arg) {
 	(void)count; (void)dcb_gpu_addrs; (void)dcb_sizes_in_bytes;
@@ -1549,8 +1549,8 @@ int PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload(
 }
 
 int PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffersForWorkload(
-    uint32_t workload, uint32_t count, uint32_t* dcb_gpu_addrs[],
-    uint32_t* dcb_sizes_in_bytes, uint32_t* ccb_gpu_addrs[],
+    uint32_t workload, uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
     uint32_t* ccb_sizes_in_bytes, uint32_t vo_handle, uint32_t buf_idx,
     uint32_t flip_mode, int64_t flip_arg) {
 	(void)workload; (void)count; (void)dcb_gpu_addrs;

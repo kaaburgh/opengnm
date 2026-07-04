@@ -115,8 +115,33 @@ static TestResult test_api_init_state(void) {
 /* --- Submit API --- */
 static TestResult test_api_submit(void) {
 	/* Generic backend: submit is a no-op returning OK */
+	void* const dcb_addrs[] = {s_cmdbuf};
+	uint32_t dcb_sizes[] = {16};
+	void* const ccb_addrs[] = {NULL};
+	uint32_t ccb_sizes[] = {0};
+
 	int32_t r = sceGnmSubmitCommandBuffers(
 	    0, NULL, NULL, NULL, NULL
+	);
+	utasserteq((long long)r, (long long)GNM_ERROR_OK);
+
+	r = sceGnmSubmitCommandBuffers(
+	    1, dcb_addrs, dcb_sizes, ccb_addrs, ccb_sizes
+	);
+	utasserteq((long long)r, (long long)GNM_ERROR_OK);
+
+	r = sceGnmSubmitAndFlipCommandBuffers(
+	    1, dcb_addrs, dcb_sizes, ccb_addrs, ccb_sizes, 0, 0, 0, 0
+	);
+	utasserteq((long long)r, (long long)GNM_ERROR_OK);
+
+	r = sceGnmSubmitCommandBuffersForWorkload(
+	    3, 1, dcb_addrs, dcb_sizes, ccb_addrs, ccb_sizes
+	);
+	utasserteq((long long)r, (long long)GNM_ERROR_OK);
+
+	r = sceGnmSubmitAndFlipCommandBuffersForWorkload(
+	    3, 1, dcb_addrs, dcb_sizes, ccb_addrs, ccb_sizes, 0, 0, 0, 0
 	);
 	utasserteq((long long)r, (long long)GNM_ERROR_OK);
 
