@@ -571,10 +571,11 @@ is `f49f68212c21d378689c913610bf49ba8f1f4d8325f3d8c78c31da0ab330e358`.
 
 **Phase 5C: Hardware hardening package matrix [IN PROGRESS]**
 
-OpenGNM has confirmed PS4 hardware passes across the submit/EOP smoke test and
-the first advanced package matrix, but it still needs repeat-launch stability
-checks before becoming Eden's default GPU library. Before switching Eden from
-freegnm to OpenGNM, validate a small package matrix on hardware:
+OpenGNM has confirmed PS4 hardware passes across the submit/EOP smoke test,
+the first advanced package matrix, and second-launch stability checks. Longer
+soak/cold-boot reruns are still useful before making it Eden's default GPU
+library. Before switching Eden from freegnm to OpenGNM, validate a small package
+matrix on hardware:
 
 - Submit/EOP smoke: existing `tests/hardware_smoke.c`, repeated after cold boot
   and second launch.
@@ -606,8 +607,7 @@ logs are useful when a package fails.
   scrolling top bar, 5 FPS.
 - `FGNM00011` renderer-draw wrapper passed on hardware: orange gradient
   triangle, 60 FPS.
-- Repeated second-launch/freeze checks are still pending for the OpenGNM-linked
-  advanced packages.
+- Second-launch/freeze checks passed for the OpenGNM-linked advanced packages.
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
