@@ -6,6 +6,7 @@
  */
 #include "test.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #include "gnm.h"
@@ -287,6 +288,97 @@ static TestResult test_drawindexoffset_neo_slice_bits(void) {
 	return test_success();
 }
 
+static TestResult test_depth_target_stencil_layout(void) {
+	const GnmDepthRenderTargetCreateInfo z24s8spec = {
+	    .width = 128,
+	    .height = 64,
+	    .pitch = 0,
+	    .numslices = 1,
+
+	    .zfmt = GNM_Z_24,
+	    .stencilfmt = GNM_STENCIL_8,
+	    .tilemodehint = GNM_TM_DEPTH_2D_THIN_64,
+	    .mingpumode = GNM_GPU_BASE,
+	    .numfragments = 1,
+	};
+	GnmDepthRenderTarget z24s8 = {0};
+	GnmError gerr = sceGnmCreateDepthRenderTarget(&z24s8, &z24s8spec);
+	utassert(gerr == GNM_ERROR_OK);
+
+	uint64_t z24s8size = 0;
+	uint32_t z24s8align = 0;
+	gerr = sceGnmDrtCalcByteSize(&z24s8size, &z24s8align, &z24s8);
+	utassert(gerr == GNM_ERROR_OK);
+	utassert(z24s8size > 0);
+	utassert(z24s8align > 0);
+
+	uint64_t stenciloffset = 0;
+	gerr = sceGnmDrtCalcStencilByteOffset(&stenciloffset, &z24s8);
+	utassert(gerr == GNM_ERROR_OK);
+	utassert(stenciloffset > 0);
+	utassert(stenciloffset < z24s8size);
+	utassert((stenciloffset & 0xff) == 0);
+
+	void* zbase = (void*)0x10000000;
+	void* stencilbase = (uint8_t*)zbase + stenciloffset;
+	utassert(sceGnmDrtSetZReadAddress(&z24s8, zbase) == GNM_ERROR_OK);
+	utassert(sceGnmDrtSetZWriteAddress(&z24s8, zbase) == GNM_ERROR_OK);
+	utassert(
+	    sceGnmDrtSetStencilReadAddress(&z24s8, stencilbase) ==
+	    GNM_ERROR_OK
+	);
+	utassert(
+	    sceGnmDrtSetStencilWriteAddress(&z24s8, stencilbase) ==
+	    GNM_ERROR_OK
+	);
+	utassert(sceGnmDrtGetZReadAddress(&z24s8) != NULL);
+	utassert(sceGnmDrtGetStencilReadAddress(&z24s8) != NULL);
+
+	const GnmDepthRenderTargetCreateInfo stencilspec = {
+	    .width = 128,
+	    .height = 64,
+	    .pitch = 0,
+	    .numslices = 1,
+
+	    .zfmt = GNM_Z_INVALID,
+	    .stencilfmt = GNM_STENCIL_8,
+	    .tilemodehint = GNM_TM_DEPTH_2D_THIN_64,
+	    .mingpumode = GNM_GPU_BASE,
+	    .numfragments = 1,
+	};
+	GnmDepthRenderTarget stencilonly = {0};
+	gerr = sceGnmCreateDepthRenderTarget(&stencilonly, &stencilspec);
+	utassert(gerr == GNM_ERROR_OK);
+
+	uint64_t stencilsize = 0;
+	uint32_t stencilalign = 0;
+	gerr = sceGnmDrtCalcByteSize(&stencilsize, &stencilalign, &stencilonly);
+	utassert(gerr == GNM_ERROR_OK);
+	utassert(stencilsize > 0);
+	utassert(stencilalign > 0);
+
+	gerr = sceGnmDrtCalcStencilByteOffset(&stenciloffset, &stencilonly);
+	utassert(gerr == GNM_ERROR_OK);
+	utassert(stenciloffset == 0);
+	utassert(sceGnmDrtGetZReadAddress(&stencilonly) == NULL);
+	utassert(
+	    sceGnmDrtSetZReadAddress(&stencilonly, (void*)0x20000000) ==
+	    GNM_ERROR_INVALID_STATE
+	);
+	utassert(
+	    sceGnmDrtSetStencilReadAddress(
+		&stencilonly, (void*)0x20000000
+	    ) == GNM_ERROR_OK
+	);
+	utassert(
+	    sceGnmDrtSetStencilWriteAddress(
+		&stencilonly, (void*)0x20000000
+	    ) == GNM_ERROR_OK
+	);
+
+	return test_success();
+}
+
 int run_tests_drawcmd(void) {
 	const TestUnit tests[] = {
 	    {test_drawindexauto, "DrawIndexAuto PM4"},
@@ -305,6 +397,7 @@ int run_tests_drawcmd(void) {
 	    {test_drawindex_rejects_null_indexaddr, "DrawIndex rejects null index address"},
 	    {test_drawindirect_rejects_truncated_sgpr_offsets, "DrawIndirect rejects truncated SGPR offsets"},
 	    {test_drawindexoffset_neo_slice_bits, "DrawIndexOffset Neo slice bits"},
+	    {test_depth_target_stencil_layout, "Depth target stencil layout"},
 	};
 	return test_suite(
 	    "drawcmd/PM4", tests, sizeof(tests) / sizeof(tests[0])

@@ -512,7 +512,7 @@ ABI without exporting a second binary ABI.
 
 **Deliverables:**
 - `tests/test_surface.c` — gpuaddr surface computation (7 tests) ✅
-- `tests/test_drawcmd.c` — PM4 command buffer building + ABI regressions (16 tests) ✅
+- `tests/test_drawcmd.c` — PM4 command buffer building + ABI regressions (17 tests) ✅
 - `tests/test_validate.c` — PM4 validation, generic backend (9 tests) ✅
 - `tests/test_api.c` — Call every sceGnm* category once (18 tests) ✅
 - `tests/test_compat.c` — freegnm-style include paths and wrapper aliases (3 tests) ✅
@@ -533,7 +533,7 @@ ABI without exporting a second binary ABI.
 - PS4 hardware smoke test for submit/draw/present paths — PASS on 2026-07-03:
   full-screen green with scrolling white bar and digit `0`
 
-**Gate P5A (PASSED):** All 53 host tests pass on generic backend via CMake/CTest,
+**Gate P5A (PASSED):** All 54 host tests pass on generic backend via CMake/CTest,
 strict CMake warning build, and `build.sh tests` / Makefile.
 
 **Gate P5B (PASSED):** OpenOrbis Docker/orbis compile, link smoke,
@@ -671,7 +671,7 @@ rejection, and NEO slice-bit preservation.
 2. **Phase 2 (DONE)** — Core implementation. 24 source files, libopengnm.a builds.
 3. **Phase 3 (DONE)** — Runtime delegation (orbis backend). 74 real externs + 14 sceGnmDriver* wrappers + 172 retail stubs + 11 validate stubs + 2 platform functions.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
-5. **Phase 5A (DONE)** — Host tests (53 tests, all passing via CMake/CTest and Makefile).
+5. **Phase 5A (DONE)** — Host tests (54 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
 7. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle` links with opengnm; migrate unsupported tool-layer includes next.
 
