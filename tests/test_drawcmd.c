@@ -498,6 +498,52 @@ static TestResult test_wait_graphics_write_layout(void) {
 	return test_success();
 }
 
+static TestResult test_streamout_config_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdSetStreamOutConfig(&cmd, 0xa, 3, 0x1234);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 6LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_SET_CONTEXT_REG);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 1LL);
+	utasserteq(
+	    (long long)s_cmdbuf[1],
+	    (long long)((R_028B94_VGT_STRMOUT_CONFIG - SI_CONTEXT_REG_OFFSET) >> 2)
+	);
+	utasserteq(
+	    (long long)s_cmdbuf[2],
+	    (long long)(S_028B94_RAST_STREAM(3) | 0xa)
+	);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[3]), (long long)PKT3_SET_CONTEXT_REG);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[3]), 1LL);
+	utasserteq(
+	    (long long)s_cmdbuf[4],
+	    (long long)((R_028B98_VGT_STRMOUT_BUFFER_CONFIG -
+			 SI_CONTEXT_REG_OFFSET) >> 2)
+	);
+	utasserteq((long long)s_cmdbuf[5], 0x1234LL);
+	return test_success();
+}
+
+static TestResult test_streamout_config_rejects_overflow(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdSetStreamOutConfig(&cmd, 0x10, 0, 0);
+	utasserteq((long long)cmd_dwords_used(&cmd), 0LL);
+
+	cmd = new_cmdbuf();
+	sceGnmDrawCmdSetStreamOutConfig(&cmd, 0, 8, 0);
+	utasserteq((long long)cmd_dwords_used(&cmd), 0LL);
+
+	cmd = new_cmdbuf();
+	sceGnmDrawCmdSetStreamOutConfig(&cmd, 0, 0, 0x10000);
+	utasserteq((long long)cmd_dwords_used(&cmd), 0LL);
+	utasserteq((long long)s_cmdbuf[0], 0LL);
+	return test_success();
+}
+
 static TestResult test_driver_wait_flip_done_layout(void) {
 	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
 	use_test_label_address(0x0000000123456000ULL);
@@ -724,6 +770,8 @@ int run_tests_drawcmd(void) {
 	    {test_waitmem_rejects_high_address, "WaitMem rejects high address"},
 	    {test_waitmem_rejects_bad_func, "WaitMem rejects bad function"},
 	    {test_wait_graphics_write_layout, "WaitGraphicsWrite PM4 layout"},
+	    {test_streamout_config_layout, "StreamOutConfig PM4 layout"},
+	    {test_streamout_config_rejects_overflow, "StreamOutConfig rejects overflow"},
 	    {test_driver_wait_flip_done_layout, "Driver wait flip done layout"},
 	    {test_driver_wait_flip_done_rejects_high_address, "Driver wait flip done rejects high address"},
 	    {test_compute_wait_on_address_layout, "Compute wait on address layout"},

@@ -1843,6 +1843,7 @@ void sceGnmDrawCmdSetStreamOutConfig(
 		    GNM_MSGSEV_ERR,
 		    "StreamOutConfig: streamen 0x%x exceeds 4 bits", streamen
 		);
+		return;
 	}
 	if (raststream > 7) {
 		sceGnmWriteMsgf(
@@ -1850,6 +1851,14 @@ void sceGnmDrawCmdSetStreamOutConfig(
 		    "StreamOutConfig: raststream %u exceeds 3 bits",
 		    raststream
 		);
+		return;
+	}
+	if (bufferen > 0xffff) {
+		sceGnmWriteMsgf(
+		    GNM_MSGSEV_ERR,
+		    "StreamOutConfig: bufferen 0x%x exceeds 16 bits", bufferen
+		);
+		return;
 	}
 
 	const uint32_t config =
