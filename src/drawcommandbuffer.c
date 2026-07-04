@@ -1682,6 +1682,23 @@ void sceGnmDrawCmdEventWriteEop(
 		return;
 	}
 
+	if (event > 0x3f) {
+		sceGnmWriteMsgf(
+		    GNM_MSGSEV_ERR,
+		    "EventWriteEop: event type %u exceeds the 6-bit PM4 field",
+		    event
+		);
+		return;
+	}
+
+	if (datasel > GNM_DATA_SEL_SEND_GPU_CLOCK) {
+		sceGnmWriteMsgf(
+		    GNM_MSGSEV_ERR,
+		    "EventWriteEop: data select %u is not supported", datasel
+		);
+		return;
+	}
+
 	const uint32_t highaddr = gpuaddr >> 32;
 
 	// Only 16 bits are available for the high address, more than 16 bits is
@@ -1705,6 +1722,7 @@ void sceGnmDrawCmdEventWriteEop(
 
 	// 64-bit data must be QWORD aligned.
 	if ((datasel == GNM_DATA_SEL_SEND_DATA64 ||
+	     datasel == GNM_DATA_SEL_SEND_SYS_CLOCK ||
 	     datasel == GNM_DATA_SEL_SEND_GPU_CLOCK) &&
 	    !ispow2aligned(gpuaddr, 8)) {
 		sceGnmWriteMsg(
