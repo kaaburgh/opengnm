@@ -225,12 +225,40 @@ static TestResult test_resetvgtcontrol(void) {
 /* --- SetVgtControl: validation + value --- */
 static TestResult test_setvgtcontrol(void) {
 	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	reset_platform_base();
 	int32_t res = sceGnmSetVgtControl(s_cmdbuf, 3, 0x80, 1, 0);
 	utasserteq((long long)res, (long long)GNM_ERROR_OK);
 
 	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_SET_CONTEXT_REG);
 	/* Expected: (1 << 16) | 0x80 = 0x10080 */
 	utasserteq((long long)s_cmdbuf[2], 0x10080LL);
+	return test_success();
+}
+
+static TestResult test_setvgtcontrol_neo(void) {
+	GnmPlatParams neo = {.gpumode = GNM_GPU_NEO};
+
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	sceGnmPlatInit(&neo);
+	int32_t res = sceGnmSetVgtControl(s_cmdbuf, 3, 0x7f, 0, 0);
+	reset_platform_base();
+
+	utasserteq((long long)res, (long long)GNM_ERROR_OK);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_SET_UCONFIG_REG);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 1LL);
+	utasserteq((long long)s_cmdbuf[1], 0x40000258LL);
+	utasserteq((long long)s_cmdbuf[2], 0x6d007fLL);
+
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	sceGnmPlatInit(&neo);
+	res = sceGnmSetVgtControl(s_cmdbuf, 3, 0x80, 1, 1);
+	reset_platform_base();
+
+	utasserteq((long long)res, (long long)GNM_ERROR_OK);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_SET_UCONFIG_REG);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 1LL);
+	utasserteq((long long)s_cmdbuf[1], 0x40000258LL);
+	utasserteq((long long)s_cmdbuf[2], 0x750080LL);
 	return test_success();
 }
 
@@ -680,6 +708,7 @@ int run_tests_drawcmd(void) {
 	    {test_drawinithwstate, "DrawInitDefaultHardwareState350"},
 	    {test_resetvgtcontrol, "ResetVgtControl"},
 	    {test_setvgtcontrol, "SetVgtControl"},
+	    {test_setvgtcontrol_neo, "SetVgtControl Neo"},
 	    {test_setvgtcontrol_invalid, "SetVgtControl invalid args"},
 	    {test_drawindexoffset, "DrawIndexOffset"},
 	    {test_drawindexoffset_rejects_large_size, "DrawIndexOffset rejects large size"},

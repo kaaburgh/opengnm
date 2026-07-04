@@ -1662,6 +1662,23 @@ int32_t PS4_SYSV_ABI sceGnmSetVgtControl(uint32_t* cmdbuf, uint32_t size,
 	    (wd_switch_only_on_eop_mode | partial_vs_wave_mode) >= 2) {
 		return GNM_ERROR_CMD_FAILED;
 	}
+	if (sceGnmGpuMode() == GNM_GPU_NEO) {
+		const uint32_t wd_switch_on_eop =
+		    (wd_switch_only_on_eop_mode != 0) << 20;
+		const uint32_t switch_on_eoi =
+		    (wd_switch_only_on_eop_mode == 0) << 19;
+		const uint32_t vgtparam = wd_switch_only_on_eop_mode != 0
+		    ? ((partial_vs_wave_mode & 1) << 16) |
+		          prim_group_sz_minus_one | wd_switch_on_eop |
+		          switch_on_eoi | 0x40000
+		    : (prim_group_sz_minus_one & 0x1cffff) |
+		          wd_switch_on_eop | switch_on_eoi | 0x50000;
+
+		cmdbuf[0] = PKT3(PKT3_SET_UCONFIG_REG, 1, 0);
+		cmdbuf[1] = 0x40000258;  /* IA_MULTI_VGT_PARAM, Neo path */
+		cmdbuf[2] = vgtparam | 0x600000;
+		return GNM_ERROR_OK;
+	}
 	const uint32_t vgtparam =
 	    ((partial_vs_wave_mode & 1) << 16) |
 	    (prim_group_sz_minus_one & 0xffff);
