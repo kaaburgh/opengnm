@@ -507,8 +507,8 @@ Merged former Phases 4 (validate/resource/workload — now all stubs, trivial) a
 Host-side tests, OpenOrbis link validation, PS4 package generation, package
 staging, and the PS4 hardware-smoke run are complete. A first downstream
 migration layer is also present: opt-in `freegnm` source compatibility maps
-compatible `gnm*` wrapper calls to the Sony SDK-style `sceGnm*` ABI without
-exporting a second binary ABI.
+compatible `gnm*`/`gpa*` wrapper calls to the Sony SDK-style `sceGnm*`/`sceGpa*`
+ABI without exporting a second binary ABI.
 
 **Deliverables:**
 - `tests/test_surface.c` — gpuaddr surface computation (7 tests) ✅
@@ -528,6 +528,8 @@ exporting a second binary ABI.
 - Full OpenOrbis Docker/orbis build + link smoke (`./build.sh docker-build`) ✅
 - Assess Eden/example direct-opengnm integration — DONE: adapter layer started;
   unsupported tooling-only old headers still need migration
+- `freegnm-examples/triangle`: `make -B USE_OPENGNM=1 tri` links against
+  `opengnm/libopengnm.a` in the OpenOrbis Docker environment ✅
 - PS4 hardware smoke test for submit/draw/present paths — PASS on 2026-07-03:
   full-screen green with scrolling white bar and digit `0`
 
@@ -542,11 +544,13 @@ with scrolling white bar and digit `0`, confirming the EOP label write after
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
-`GnmCommandBuffer`, etc.). opengnm now provides source-only aliases in
-`<compat/freegnm.h>` plus core `<gnm/...>` forwarding headers. This preserves the
-official `sceGnm*` / `sceGpa*` binary ABI because no exported `gnm*` symbols are
-added. Consumers that include old `gnm/pssl/*`, `gnm/gnf/*`, or other tool-layer
-headers still need source migration to opengnm's split tool libraries.
+`GnmCommandBuffer`, `gpaFindOptimalSurface`, etc.). opengnm now provides
+source-only aliases in `<compat/freegnm.h>` plus core `<gnm/...>` forwarding
+headers. This preserves the official `sceGnm*` / `sceGpa*` binary ABI because no
+exported `gnm*` or `gpa*` symbols are added. The `triangle` example has an
+opt-in opengnm link path. Consumers that include old `gnm/pssl/*`, `gnm/gnf/*`,
+or other tool-layer headers still need source migration to opengnm's split tool
+libraries.
 
 ### Compatibility Audit: ABI and PM4 Edge Cases [DONE — 2026-07-03]
 
@@ -655,7 +659,7 @@ rejection, and NEO slice-bit preservation.
 | Orbis runtime mismatch | Low | High | Gate P5B passed on hardware: package launch reached green code `0` after submit/EOP |
 | Host backend PM4 edge-case drift | Med | High | Regression tests + shadPS4/firmware diffs |
 | Stream-out buffer base address incomplete | Med | Med | RE `STRMOUT_BUFFER_UPDATE`/base-address behavior before wiring |
-| Eden/freegnm downstream migration breaks builds | Med | Med | Source-only aliases cover core headers; tooling-only headers still need migration |
+| Eden/freegnm downstream migration breaks builds | Med | Med | Source-only aliases cover core headers and triangle; tooling-only headers still need migration |
 | Debugger stubs wrong error codes | Low | Low | Match `ORBIS_GNM_ERROR_*` |
 
 ---
@@ -669,7 +673,7 @@ rejection, and NEO slice-bit preservation.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
 5. **Phase 5A (DONE)** — Host tests (53 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
-7. **Downstream migration (STARTED)** — Source-only `gnm*` aliases and core `<gnm/...>` forwarding headers are present; migrate unsupported tool-layer includes next.
+7. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle` links with opengnm; migrate unsupported tool-layer includes next.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
 After Phase 5A, host behavior is regression-tested. After Phase 5B, the

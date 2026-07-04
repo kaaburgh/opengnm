@@ -61,7 +61,16 @@ static TestResult compat_helper_aliases_compile(void) {
 
 	GpaSurfaceProperties props;
 	memset(&props, 0, sizeof(props));
-	utassert((void*)&props != NULL);
+	GpaError err = gpaFindOptimalSurface(
+	    &props,
+	    GPA_SURFACE_COLOR,
+	    32,
+	    1,
+	    false,
+	    GNM_GPU_BASE
+	);
+	utasserteq(err, GPA_ERR_OK);
+	utassert(gpaStrError(err) != NULL);
 
 	return test_success();
 }

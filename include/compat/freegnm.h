@@ -19,6 +19,27 @@
 #define gnmPlatInit sceGnmPlatInit
 #define gnmPlatGetBufferLabelAddress sceGnmPlatGetBufferLabelAddress
 
+/* gpuaddr */
+#define gpaStrError sceGpaStrError
+#define gpaComputeSurfaceInfo sceGpaComputeSurfaceInfo
+#define gpaComputeHtileInfo sceGpaComputeHtileInfo
+#define gpaComputeCmaskInfo sceGpaComputeCmaskInfo
+#define gpaComputeFmaskInfo sceGpaComputeFmaskInfo
+#define gpaComputeSurfaceTileMode sceGpaComputeSurfaceTileMode
+#define gpaInitSurfaceContext sceGpaInitSurfaceContext
+#define gpaComputeSurfaceCoord sceGpaComputeSurfaceCoord
+#define gpaComputeSurfaceSizeOffset sceGpaComputeSurfaceSizeOffset
+#define gpaFindOptimalSurface sceGpaFindOptimalSurface
+#define gpaGetTileInfo sceGpaGetTileInfo
+#define gpaComputeBaseSwizzle sceGpaComputeBaseSwizzle
+#define gpaGetDecompressedSize sceGpaGetDecompressedSize
+#define gpaDecompressTexture sceGpaDecompressTexture
+#define gpaTpInit sceGpaTpInit
+#define gpaTileSurface sceGpaTileSurface
+#define gpaTileSurfaceRegion sceGpaTileSurfaceRegion
+#define gpaTileTextureIndexed sceGpaTileTextureIndexed
+#define gpaTileTextureAll sceGpaTileTextureAll
+
 /* command buffers */
 #define gnmCmdInit sceGnmCmdInit
 #define gnmCmdReset sceGnmCmdReset

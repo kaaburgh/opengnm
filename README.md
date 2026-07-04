@@ -21,7 +21,7 @@ against opengnm unmodified.
 - **GCN assembler** — fetch shader generation
 - **PM4 encoding** — command buffer packet building
 - **Opt-in freegnm source compatibility** — `<compat/freegnm.h>` and
-  `<gnm/...>` forwarding headers map compatible `gnm*` wrapper calls to
+  `<gnm/...>` forwarding headers map compatible `gnm*` / `gpa*` wrapper calls to
   `sceGnm*` without exporting a second ABI
 
 ## Status
@@ -36,8 +36,9 @@ The verified PS4 hardware smoke result is a full-screen green status view with
 scrolling white bar and digit `0`, confirming VideoOut presentation and the GNM
 submit/EOP path. Eden and `freegnm-examples` currently consume the older `gnm*`
 wrapper API from `freegnm`; the first adapter layer now covers one-to-one core
-headers and wrapper names. Consumers that include old tooling-only headers such
-as `gnm/pssl/*` or `gnm/gnf/*` still need migration to the split tool libraries.
+headers and wrapper names, and `freegnm-examples/triangle` now links with
+`USE_OPENGNM=1`. Consumers that include old tooling-only headers such as
+`gnm/pssl/*` or `gnm/gnf/*` still need migration to the split tool libraries.
 
 See `OPENGNM_REWRITE_PLAN.md` for the full plan and progress.
 
