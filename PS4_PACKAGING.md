@@ -47,6 +47,28 @@ Advanced OpenGNM matrix packages staged to `/data/pkg` on 2026-07-04:
 | `FGNM00009` | `IV0000-FGNM00009_00-EDENCOMPOSITEBLT.pkg` | `da50b62751e3a8399324636058dc76a0104dcc2e5a246a063e9bcff99e1184c0` | PASS: tiles slowly flipping, scrolling top bar, 5 FPS |
 | `FGNM00011` | `IV0000-FGNM00011_00-EDENTRIWRAPPER00.pkg` | `fb621085e4b0bbd93ccc79340c5ce4f9c5231083fb8cdfc723db755b6f9d8dc7` | PASS: orange gradient triangle, 60 FPS |
 
+Native macOS OpenOrbis rebuilds of the same advanced package matrix were
+verified on 2026-07-04 without Docker:
+
+```sh
+USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_triangle_pkg.sh
+USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_eden_composite_dma_pkg.sh
+USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_eden_composite_blit_pkg.sh
+USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_eden_triangle_wrapper_pkg.sh
+```
+
+On macOS, the wrappers use Homebrew `llvm@18`, the cached OpenOrbis v0.5.4
+LLVM 18 SDK, `create-fself-macos`, `create-gp4`, and `PkgTool.Core`. Shader
+packages use prebuilt `.sb` assets; `psbc` is only a reference/regeneration tool,
+not a required dependency for the native package path.
+
+| Title ID | Native macOS SHA-256 |
+|---|---|
+| `FGNM00000` | `7505ca8c1fd4cbbf0f0efcc3dc3329b963871093b56a5da49c3553c05597951c` |
+| `FGNM00008` | `532e63dbdc25b787125346c32395764198f2666c9187a2fcb989c86bdb20619e` |
+| `FGNM00009` | `0fba2ffe964ecf7045aab638466605814f7b21c9038d175d4d6a7f2ff02ab3c8` |
+| `FGNM00011` | `ddae0b3efea02840dd8d2ab4bee5eb971b87610589ac76f1639d3ae300aa247b` |
+
 ## Target Configuration Found
 
 The active Codex config does not contain a PS4 host. The project scripts and

@@ -609,6 +609,10 @@ useful when a package fails.
   triangle, 60 FPS.
 - Second- and third-launch/freeze checks passed for the OpenGNM-linked advanced
   packages.
+- Native macOS OpenOrbis rebuilds of the same package matrix pass packaging
+  validation without Docker. The wrappers use Homebrew `llvm@18`, OpenOrbis
+  v0.5.4 LLVM 18 macOS tools, and prebuilt `.sb` shader assets; `psbc` is only a
+  reference/regeneration tool for this path.
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
