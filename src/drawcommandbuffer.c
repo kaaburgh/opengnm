@@ -1768,11 +1768,25 @@ void sceGnmDrawCmdWaitMem(
 		sceGnmWriteMsg(GNM_MSGSEV_ERR, "gpuaddr must not be null");
 		return;
 	}
+	if (op > GNM_WAIT_REG_MEM_FUNC_GREATER) {
+		sceGnmWriteMsgf(
+		    GNM_MSGSEV_ERR,
+		    "WaitMem: compare function %u exceeds supported range", op
+		);
+		return;
+	}
+	const uint32_t highaddr = gpuaddr >> 32;
+	if ((highaddr >> 16) != 0) {
+		sceGnmWriteMsg(
+		    GNM_MSGSEV_ERR, "WaitMem: high 16 bits of gpuaddr must be 0"
+		);
+		return;
+	}
 
 	cmd->cmdptr[0] = PKT3(PKT3_WAIT_REG_MEM, 5, 0);
 	cmd->cmdptr[1] = op | WAIT_REG_MEM_MEM_SPACE(1);
 	cmd->cmdptr[2] = gpuaddr & 0xffffffff;
-	cmd->cmdptr[3] = ((gpuaddr >> 32) & 0xffff);
+	cmd->cmdptr[3] = highaddr;
 	cmd->cmdptr[4] = refval;
 	cmd->cmdptr[5] = mask;
 	cmd->cmdptr[6] = 4;  // poll interval

@@ -377,6 +377,30 @@ static TestResult test_waitmem_layout(void) {
 	return test_success();
 }
 
+static TestResult test_waitmem_rejects_high_address(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdWaitMem(
+	    &cmd, GNM_WAIT_REG_MEM_FUNC_EQUAL, 0x0001000000000000ULL, 0, 0xffffffff
+	);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 0LL);
+	utasserteq((long long)s_cmdbuf[0], 0LL);
+	return test_success();
+}
+
+static TestResult test_waitmem_rejects_bad_func(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdWaitMem(&cmd, 7, 0x0000000123456780ULL, 0, 0xffffffff);
+
+	utasserteq((long long)cmd_dwords_used(&cmd), 0LL);
+	utasserteq((long long)s_cmdbuf[0], 0LL);
+	return test_success();
+}
+
 static TestResult test_wait_graphics_write_layout(void) {
 	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
 	GnmCommandBuffer cmd = new_cmdbuf();
@@ -623,6 +647,8 @@ int run_tests_drawcmd(void) {
 	    {test_event_write_eop_data64_layout, "EventWriteEop DATA64 layout"},
 	    {test_event_write_eop_rejects_high_address, "EventWriteEop rejects high address"},
 	    {test_waitmem_layout, "WaitMem PM4 layout"},
+	    {test_waitmem_rejects_high_address, "WaitMem rejects high address"},
+	    {test_waitmem_rejects_bad_func, "WaitMem rejects bad function"},
 	    {test_wait_graphics_write_layout, "WaitGraphicsWrite PM4 layout"},
 	    {test_driver_wait_flip_done_layout, "Driver wait flip done layout"},
 	    {test_driver_wait_flip_done_rejects_high_address, "Driver wait flip done rejects high address"},
