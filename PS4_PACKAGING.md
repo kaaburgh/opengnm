@@ -69,6 +69,9 @@ not a required dependency for the native package path.
 | `FGNM00009` | `0fba2ffe964ecf7045aab638466605814f7b21c9038d175d4d6a7f2ff02ab3c8` |
 | `FGNM00011` | `ddae0b3efea02840dd8d2ab4bee5eb971b87610589ac76f1639d3ae300aa247b` |
 
+These native macOS rebuilds were uploaded to `/data/pkg` on 2026-07-04 for
+hardware launch confirmation.
+
 ## Target Configuration Found
 
 The active Codex config does not contain a PS4 host. The project scripts and
