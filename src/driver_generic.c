@@ -790,11 +790,15 @@ int32_t sceGnmDriverInsertWaitFlipDone(
 	uint64_t labeladdr = 0;
 	sceGnmPlatGetBufferLabelAddress(videohandle, &labeladdr);
 	labeladdr += displaybufidx * 8;
+	const uint32_t highaddr = (uint32_t)(labeladdr >> 32);
+	if (highaddr > 0xffff) {
+		return GNM_ERROR_CMD_FAILED;
+	}
 
 	cmd[0] = PKT3(PKT3_WAIT_REG_MEM, 5, 0);
 	cmd[1] = WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1);
 	cmd[2] = labeladdr & 0xffffffff;
-	cmd[3] = ((labeladdr >> 32) & 0xffff);
+	cmd[3] = highaddr;
 	cmd[4] = 0;
 	cmd[5] = 0xffffffff;
 	cmd[6] = 10; /* poll interval */
@@ -1612,13 +1616,18 @@ int32_t PS4_SYSV_ABI sceGnmComputeWaitOnAddress(uint32_t* cmdbuf,
                                                 uint32_t size, uintptr_t addr,
                                                 uint32_t mask, uint32_t cmp_func,
                                                 uint32_t ref) {
-	if (!cmdbuf || size < 7) {
+	if (!cmdbuf || size < 7 || cmp_func > GNM_WAIT_REG_MEM_FUNC_GREATER) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	const uint64_t gpuaddr = (uint64_t)addr;
+	const uint32_t highaddr = (uint32_t)(gpuaddr >> 32);
+	if (highaddr > 0xffff) {
 		return GNM_ERROR_CMD_FAILED;
 	}
 	cmdbuf[0] = PKT3(PKT3_WAIT_REG_MEM, 5, 0);
-	cmdbuf[1] = (cmp_func & 0xf) | WAIT_REG_MEM_MEM_SPACE(1);
-	cmdbuf[2] = (uint32_t)(addr & 0xffffffff);
-	cmdbuf[3] = (uint32_t)((addr >> 32) & 0xffff);
+	cmdbuf[1] = cmp_func | WAIT_REG_MEM_MEM_SPACE(1);
+	cmdbuf[2] = (uint32_t)(gpuaddr & 0xffffffff);
+	cmdbuf[3] = highaddr;
 	cmdbuf[4] = ref;
 	cmdbuf[5] = mask;
 	cmdbuf[6] = 10;

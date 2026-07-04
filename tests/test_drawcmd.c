@@ -28,6 +28,29 @@
 
 static uint32_t s_cmdbuf[4096];
 static uint32_t s_resizebuf[32];
+static uint64_t s_test_labeladdr;
+
+static int32_t test_get_buffer_label_address(
+    int32_t videohandle, uint64_t* outaddr
+) {
+	(void)videohandle;
+	*outaddr = s_test_labeladdr;
+	return GNM_ERROR_OK;
+}
+
+static void use_test_label_address(uint64_t labeladdr) {
+	s_test_labeladdr = labeladdr;
+	GnmPlatParams params = {
+	    .gpumode = GNM_GPU_BASE,
+	    .getbufferlabeladdress = test_get_buffer_label_address,
+	};
+	sceGnmPlatInit(&params);
+}
+
+static void reset_platform_base(void) {
+	GnmPlatParams params = {.gpumode = GNM_GPU_BASE};
+	sceGnmPlatInit(&params);
+}
 
 static bool grow_callback(
     GnmCommandBuffer* cmd, uint32_t sizedwords, void* userdata
@@ -381,6 +404,89 @@ static TestResult test_wait_graphics_write_layout(void) {
 	return test_success();
 }
 
+static TestResult test_driver_wait_flip_done_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	use_test_label_address(0x0000000123456000ULL);
+
+	int32_t res = sceGnmDriverInsertWaitFlipDone(s_cmdbuf, 7, 9, 3);
+	reset_platform_base();
+
+	utasserteq((long long)res, (long long)GNM_ERROR_OK);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_WAIT_REG_MEM);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 5LL);
+	utasserteq(
+	    (long long)s_cmdbuf[1],
+	    (long long)(WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1))
+	);
+	utasserteq((long long)s_cmdbuf[2], 0x23456018LL);
+	utasserteq((long long)s_cmdbuf[3], 0x1LL);
+	utasserteq((long long)s_cmdbuf[4], 0LL);
+	utasserteq((long long)s_cmdbuf[5], 0xffffffffLL);
+	utasserteq((long long)s_cmdbuf[6], 10LL);
+	return test_success();
+}
+
+static TestResult test_driver_wait_flip_done_rejects_high_address(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	use_test_label_address(0x0001000000000000ULL);
+
+	int32_t res = sceGnmDriverInsertWaitFlipDone(s_cmdbuf, 7, 9, 0);
+	reset_platform_base();
+
+	utasserteq((long long)res, (long long)GNM_ERROR_CMD_FAILED);
+	utasserteq((long long)s_cmdbuf[0], 0LL);
+	return test_success();
+}
+
+static TestResult test_compute_wait_on_address_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+
+	int32_t res = sceGnmComputeWaitOnAddress(
+	    s_cmdbuf, 7, (uintptr_t)0x0000000123456780ULL, 0xff00ff00,
+	    GNM_WAIT_REG_MEM_FUNC_NOT_EQUAL, 0xabcdef01
+	);
+
+	utasserteq((long long)res, (long long)GNM_ERROR_OK);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_WAIT_REG_MEM);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 5LL);
+	utasserteq(
+	    (long long)s_cmdbuf[1],
+	    (long long)(GNM_WAIT_REG_MEM_FUNC_NOT_EQUAL | WAIT_REG_MEM_MEM_SPACE(1))
+	);
+	utasserteq((long long)s_cmdbuf[2], 0x23456780LL);
+	utasserteq((long long)s_cmdbuf[3], 0x1LL);
+	utasserteq((long long)s_cmdbuf[4], 0xabcdef01LL);
+	utasserteq((long long)s_cmdbuf[5], 0xff00ff00LL);
+	utasserteq((long long)s_cmdbuf[6], 10LL);
+	return test_success();
+}
+
+static TestResult test_compute_wait_on_address_rejects_high_address(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+
+	int32_t res = sceGnmComputeWaitOnAddress(
+	    s_cmdbuf, 7, (uintptr_t)0x0001000000000000ULL, 0xffffffff,
+	    GNM_WAIT_REG_MEM_FUNC_EQUAL, 0
+	);
+
+	utasserteq((long long)res, (long long)GNM_ERROR_CMD_FAILED);
+	utasserteq((long long)s_cmdbuf[0], 0LL);
+	return test_success();
+}
+
+static TestResult test_compute_wait_on_address_rejects_bad_func(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+
+	int32_t res = sceGnmComputeWaitOnAddress(
+	    s_cmdbuf, 7, (uintptr_t)0x0000000123456780ULL, 0xffffffff,
+	    7, 0
+	);
+
+	utasserteq((long long)res, (long long)GNM_ERROR_CMD_FAILED);
+	utasserteq((long long)s_cmdbuf[0], 0LL);
+	return test_success();
+}
+
 static TestResult test_reset_query_zpass_eop_layout(void) {
 	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
 	GnmCommandBuffer cmd = new_cmdbuf();
@@ -518,6 +624,11 @@ int run_tests_drawcmd(void) {
 	    {test_event_write_eop_rejects_high_address, "EventWriteEop rejects high address"},
 	    {test_waitmem_layout, "WaitMem PM4 layout"},
 	    {test_wait_graphics_write_layout, "WaitGraphicsWrite PM4 layout"},
+	    {test_driver_wait_flip_done_layout, "Driver wait flip done layout"},
+	    {test_driver_wait_flip_done_rejects_high_address, "Driver wait flip done rejects high address"},
+	    {test_compute_wait_on_address_layout, "Compute wait on address layout"},
+	    {test_compute_wait_on_address_rejects_high_address, "Compute wait on address rejects high address"},
+	    {test_compute_wait_on_address_rejects_bad_func, "Compute wait on address rejects bad function"},
 	    {test_reset_query_zpass_eop_layout, "ResetQuery ZPASS EOP layout"},
 	    {test_depth_target_stencil_layout, "Depth target stencil layout"},
 	};
