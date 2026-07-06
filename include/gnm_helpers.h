@@ -73,6 +73,7 @@ typedef struct {
 	uint32_t height;
 	uint32_t pitch;
 	uint32_t numbuffers;
+	uint32_t registeredbuffers;
 	uint32_t currentbuffer;
 	uint64_t buffersize;
 	uint64_t bufferstride;

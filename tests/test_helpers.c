@@ -38,6 +38,12 @@ static TestResult test_helpers_videoout_layout(void) {
 	utasserteq((long long)buffersize, 1280LL * 720LL * 4LL);
 	utassert(bufferstride >= buffersize);
 	utassert((bufferstride & (GNM_VIDEO_OUT_MEMORY_ALIGNMENT - 1)) == 0);
+
+	info.pitch = UINT32_MAX;
+	info.height = UINT32_MAX;
+	info.bytesperpixel = UINT32_MAX;
+	err = sceGnmVideoOutCalcBufferLayout(&info, NULL, NULL);
+	utasserteq((long long)err, (long long)GNM_ERROR_OVERFLOW);
 	return test_success();
 }
 

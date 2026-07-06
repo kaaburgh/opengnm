@@ -133,6 +133,10 @@ GnmError PS4_SYSV_ABI sceGnmDirectMemoryAllocate(
 		memset(memory, 0, sizeof(*memory));
 		return GNM_ERROR_OVERFLOW;
 	}
+	if (allocsize > (uint64_t)SIZE_MAX) {
+		memset(memory, 0, sizeof(*memory));
+		return GNM_ERROR_OVERFLOW;
+	}
 	void* raw = malloc((size_t)allocsize);
 	if (!raw) {
 		memset(memory, 0, sizeof(*memory));
@@ -234,6 +238,10 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	if (err != GNM_ERROR_OK) {
 		return err;
 	}
+	uint64_t totalbuffersize = 0;
+	if (!mul_u64(bufferstride, info->numbuffers, &totalbuffersize)) {
+		return GNM_ERROR_OVERFLOW;
+	}
 
 #if OPENGNM_HELPERS_HAS_ORBIS_LIBKERNEL && OPENGNM_HELPERS_HAS_ORBIS_VIDEOOUT
 	videoout->handle = sceVideoOutOpen(0, info->bus, 0, NULL);
@@ -244,9 +252,8 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	}
 
 	err = sceGnmDirectMemoryAllocate(
-	    &videoout->memory, bufferstride * info->numbuffers,
-	    info->alignment, GNM_DIRECT_MEMORY_TYPE_WC_GARLIC,
-	    GNM_PROT_CPU_GPU_RW
+	    &videoout->memory, totalbuffersize, info->alignment,
+	    GNM_DIRECT_MEMORY_TYPE_WC_GARLIC, GNM_PROT_CPU_GPU_RW
 	);
 	if (err != GNM_ERROR_OK) {
 		sceGnmVideoOutClose(videoout);
@@ -258,6 +265,12 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 		    (uint8_t*)videoout->memory.mapped + i * bufferstride;
 		memset(videoout->buffers[i], 0, (size_t)buffersize);
 	}
+	videoout->width = info->width;
+	videoout->height = info->height;
+	videoout->pitch = info->pitch;
+	videoout->numbuffers = info->numbuffers;
+	videoout->buffersize = buffersize;
+	videoout->bufferstride = bufferstride;
 
 	OrbisVideoOutBufferAttribute attr;
 	memset(&attr, 0, sizeof(attr));
@@ -274,6 +287,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}
+	videoout->registeredbuffers = info->numbuffers;
 
 	OrbisKernelEqueue queue = 0;
 	result = sceKernelCreateEqueue(&queue, "opengnm videoout flips");
@@ -290,16 +304,11 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	}
 
 	sceVideoOutSetFlipRate(videoout->handle, info->flip_rate);
-	videoout->width = info->width;
-	videoout->height = info->height;
-	videoout->pitch = info->pitch;
-	videoout->numbuffers = info->numbuffers;
-	videoout->buffersize = buffersize;
-	videoout->bufferstride = bufferstride;
 	return GNM_ERROR_OK;
 #else
 	(void)buffersize;
 	(void)bufferstride;
+	(void)totalbuffersize;
 	return GNM_ERROR_UNSUPPORTED;
 #endif
 }
@@ -310,7 +319,7 @@ void PS4_SYSV_ABI sceGnmVideoOutClose(GnmVideoOut* videoout) {
 	}
 #if OPENGNM_HELPERS_HAS_ORBIS_LIBKERNEL && OPENGNM_HELPERS_HAS_ORBIS_VIDEOOUT
 	if (videoout->handle >= 0) {
-		for (uint32_t i = 0; i < videoout->numbuffers; i += 1) {
+		for (uint32_t i = 0; i < videoout->registeredbuffers; i += 1) {
 			sceVideoOutUnregisterBuffers(videoout->handle, (int32_t)i);
 		}
 		sceVideoOutClose(videoout->handle);
