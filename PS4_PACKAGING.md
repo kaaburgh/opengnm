@@ -38,6 +38,47 @@ IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg
 SHA-256: f49f68212c21d378689c913610bf49ba8f1f4d8325f3d8c78c31da0ab330e358
 ```
 
+## Consumer Build Interface
+
+As of 2026-07-06, OpenGNM installs a stable consumer interface for renderer
+backends such as bgfx:
+
+- CMake package target: `opengnm::opengnm`
+- pkg-config file: `opengnm.pc`
+- installed public headers under the configured include directory
+- static library under the configured library directory
+
+CMake consumers:
+
+```cmake
+find_package(opengnm CONFIG REQUIRED)
+target_link_libraries(my_renderer PRIVATE opengnm::opengnm)
+```
+
+pkg-config consumers:
+
+```sh
+cc $(pkg-config --cflags opengnm) -c renderer.c
+cc renderer.o $(pkg-config --libs --static opengnm)
+```
+
+PS4 targets still need the firmware libraries that the Orbis backend delegates
+to:
+
+```sh
+-lopengnm -lkernel -lSceGnmDriver -lSceVideoOut
+```
+
+`libopengnm.a` exports the `sceGnmDrawCmd*` wrapper symbols used by higher-level
+renderers. On Orbis, `sceGnmSubmit*` is expected to resolve from firmware
+`libSceGnmDriver`; the generic backend provides no-op host-test submit
+implementations.
+
+`<gnm_helpers.h>` covers the setup paths most useful to packageable renderers:
+direct memory, VideoOut backbuffer layout/flip helpers, texture and color
+render-target descriptors, shader binary metadata, and command-buffer
+validation diagnostics.
+
 Advanced OpenGNM matrix packages staged to `/data/pkg` on 2026-07-04:
 
 | Title ID | Package | SHA-256 | Hardware result |
@@ -55,22 +96,54 @@ USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_triangle_pkg.sh
 USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_eden_composite_dma_pkg.sh
 USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_eden_composite_blit_pkg.sh
 USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_eden_triangle_wrapper_pkg.sh
+USE_OPENGNM=1 OPENORBIS_BUILD_BACKEND=macos tools/build_cube_pkg.sh
 ```
 
 On macOS, the wrappers use Homebrew `llvm@18`, the cached OpenOrbis v0.5.4
 LLVM 18 SDK, `create-fself-macos`, `create-gp4`, and `PkgTool.Core`. Shader
 packages use prebuilt `.sb` assets; `psbc` is only a reference/regeneration tool,
-not a required dependency for the native package path.
+not a required dependency for the native package path. The cube sample also uses
+the local workspace `cglm` checkout for matrix math headers.
 
 | Title ID | Native macOS SHA-256 |
 |---|---|
 | `FGNM00000` | `7505ca8c1fd4cbbf0f0efcc3dc3329b963871093b56a5da49c3553c05597951c` |
+| `FGNM00001` | `80b81cb4ee06ec092bdff40d7a8b78ac4149f982ec9f1613a15312c9db857eeb` |
 | `FGNM00008` | `532e63dbdc25b787125346c32395764198f2666c9187a2fcb989c86bdb20619e` |
 | `FGNM00009` | `0fba2ffe964ecf7045aab638466605814f7b21c9038d175d4d6a7f2ff02ab3c8` |
 | `FGNM00011` | `ddae0b3efea02840dd8d2ab4bee5eb971b87610589ac76f1639d3ae300aa247b` |
 
-These native macOS rebuilds were uploaded to `/data/pkg` on 2026-07-04 for
-hardware launch confirmation.
+These native macOS rebuilds were uploaded to `/data/pkg` on 2026-07-04 and
+hardware-confirmed. The four earlier tests still behave as before. `FGNM00001`
+shows a visible spinning textured cube at 60 FPS with about 2% CPU usage. The
+cube build intentionally does not define `CGLM_FORCE_LEFT_HANDED`: the sample
+places the cube at negative Z, so the left-handed projection variant produced a
+white clear screen with no visible cube.
+
+The cube `.sb` shader assets were generated once from the GLSL sources with
+host `glslc` plus Linux `psbc` inside Docker because the macOS OpenOrbis package
+path intentionally does not depend on `psbc`. Once those assets exist, the cube
+package rebuild is fully native macOS OpenOrbis:
+
+```sh
+glslc -fshader-stage=vertex freegnm-examples/cube/assets/misc/cube.vert.glsl -o freegnm-examples/cube/assets/misc/cube.vert.spv
+glslc -fshader-stage=fragment freegnm-examples/cube/assets/misc/clear.frag.glsl -o freegnm-examples/cube/assets/misc/clear.frag.spv
+glslc -fshader-stage=fragment freegnm-examples/cube/assets/misc/cube.frag.glsl -o freegnm-examples/cube/assets/misc/cube.frag.spv
+docker run --rm --platform linux/amd64 \
+  --mount type=bind,source="$(pwd)",target=/work \
+  -w /work openorbisofficial/toolchain:latest bash -lc '
+set -e
+cd /work/psbc
+make -j"$(nproc)" \
+  CFLAGS="-std=gnu11 -Wall -O2 -g -include alloca.h -include strings.h -I../freegnm -I../Vulkan-Headers/include -I../mesa/include -Iinclude/ -Isrc/ -Isrc/amd -Isrc/amd/common -Isrc/amd/compiler -Isrc/amd/vulkan -Isrc/compiler -Isrc/compiler/nir -Isrc/gallium/include -Isrc/mesa -Isrc/util -D_XOPEN_SOURCE=700 -DUTIL_ARCH_LITTLE_ENDIAN=1 -DUTIL_ARCH_BIG_ENDIAN=0 -DHAVE_STRUCT_TIMESPEC=1 -DHAVE_PTHREAD=1" \
+  CXXFLAGS="-std=c++17 -Wall -O2 -g -I../freegnm -I../Vulkan-Headers/include -I../mesa/include -Iinclude/ -Isrc/ -Isrc/amd -Isrc/amd/common -Isrc/amd/compiler -Isrc/amd/vulkan -Isrc/compiler -Isrc/compiler/nir -Isrc/gallium/include -Isrc/mesa -Isrc/util -D_XOPEN_SOURCE=700 -DUTIL_ARCH_LITTLE_ENDIAN=1 -DUTIL_ARCH_BIG_ENDIAN=0 -DHAVE_STRUCT_TIMESPEC=1 -DHAVE_PTHREAD=1" \
+  LDFLAGS="-lm -lpthread"
+cd /work/freegnm-examples/cube
+/work/psbc/psbc -s vertex -f assets/misc/cube.vert.spv -o assets/misc/cube.vert.sb
+/work/psbc/psbc -s fragment -f assets/misc/clear.frag.spv -o assets/misc/clear.frag.sb
+/work/psbc/psbc -s fragment -f assets/misc/cube.frag.spv -o assets/misc/cube.frag.sb
+'
+```
 
 ## Target Configuration Found
 
@@ -416,3 +489,13 @@ Do not commit:
 - Generated `pkg.gp4`
 - Generated `sce_sys/param.sfo`
 - Copied runtime `.prx` files
+
+## freegnm-example spinning cube (OpenGNM)
+- `tools/build_cube_pkg.sh` packages the `cube` sample through native macOS OpenOrbis tooling with:
+  - `freegnm-examples/cube/IV0000-FGNM00001_00-CUBESAMPLE000000.pkg`
+  - Title `FGNM00001`
+  - Content ID `IV0000-FGNM00001_00-CUBESAMPLE000000`
+  - Use-command:
+    - `OPENORBIS_BUILD_BACKEND=macos tools/build_cube_pkg.sh`
+- Runtime artifact hash after staging:
+    - `b99208b2d8145b78f85603c0ba8be2475296f5f55146f71cb5aef3c9c7c9d576`

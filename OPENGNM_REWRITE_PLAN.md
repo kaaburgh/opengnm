@@ -594,13 +594,16 @@ useful when a package fails.
 
 **Phase 5C build/staging status (2026-07-04):**
 
-- `FGNM00000` triangle, `FGNM00008` composite DMA, `FGNM00009` composite blit,
-  and `FGNM00011` renderer-draw wrapper all build with `USE_OPENGNM=1`.
+- `FGNM00000` triangle, `FGNM00001` spinning cube, `FGNM00008` composite DMA,
+  `FGNM00009` composite blit, and `FGNM00011` renderer-draw wrapper all build
+  with `USE_OPENGNM=1`.
 - Each builder now forces a clean PS4-target OpenGNM static library inside the
   Docker/OpenOrbis environment so it cannot accidentally link a host-built
   `libopengnm.a`.
-- All four packages are staged to `/data/pkg` on the PS4 FTP server.
+- All five packages are staged to `/data/pkg` on the PS4 FTP server.
 - `FGNM00000` triangle passed on hardware at 60 FPS.
+- `FGNM00001` spinning cube passed on hardware: visible textured cube, 60 FPS,
+  about 2% CPU usage.
 - `FGNM00008` composite DMA passed on hardware: tiles slowly flipping, scrolling
   top bar, 4.61 FPS.
 - `FGNM00009` composite blit passed on hardware: tiles slowly flipping,
@@ -612,18 +615,46 @@ useful when a package fails.
 - Native macOS OpenOrbis rebuilds of the same package matrix pass packaging
   validation without Docker. The wrappers use Homebrew `llvm@18`, OpenOrbis
   v0.5.4 LLVM 18 macOS tools, and prebuilt `.sb` shader assets; `psbc` is only a
-  reference/regeneration tool for this path.
+  reference/regeneration tool for this path. The cube package uses the local
+  `cglm` checkout and its `.sb` shader assets were regenerated with Docker
+  `psbc` before the native package build.
 
 **Downstream migration started:** Eden and `freegnm-examples` link `../freegnm`
 and call `gnm*` wrapper functions (`gnmCmdInit`, `gnmDrawCmd*`,
 `GnmCommandBuffer`, `gpaFindOptimalSurface`, etc.). opengnm now provides
 source-only aliases in `<compat/freegnm.h>` plus core `<gnm/...>` forwarding
 headers. This preserves the official `sceGnm*` / `sceGpa*` binary ABI because no
-exported `gnm*` or `gpa*` symbols are added. The `triangle`,
+exported `gnm*` or `gpa*` symbols are added. The `triangle`, `cube`,
 `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper`
 examples have opt-in opengnm link paths. Consumers that
 include old `gnm/pssl/*`, `gnm/gnf/*`, or other tool-layer headers still need
 source migration to opengnm's split tool libraries.
+
+**Phase 5D: bgfx consumer integration surface [DONE — 2026-07-06]**
+
+OpenGNM now has a stable enough public surface for a bgfx GNM backend to include
+and link directly:
+
+- Public headers are C++ clean under `clang++ -std=c++14`; exported C APIs use
+  `OPENGNM_EXTERN_C_BEGIN` / `OPENGNM_EXTERN_C_END`, and `_Static_assert` falls
+  back to `static_assert` in C++.
+- Generated separator fragments in `gnmdriver.h`, `src/driver_generic.c`, and
+  `src/driver_orbis.c` were normalized to valid C comments.
+- `gnm_dataformat.h`, `gnm_buffer.h`, `gnm_texture.h`, and
+  `gnm_rendertarget.h` no longer rely on C-only initializer forms in inline
+  helpers used by C++ consumers.
+- `<gnm_helpers.h>` adds renderer-oriented helpers for direct memory, VideoOut
+  backbuffer layout and optional Orbis flip handling, 2D texture setup, color
+  render-target setup, shader binary metadata extraction, and command-buffer
+  validation diagnostics.
+- CMake now exports `opengnm::opengnm`; install rules generate
+  `opengnmConfig.cmake`, `opengnmConfigVersion.cmake`, and `opengnm.pc`.
+- Orbis consumers should link `-lopengnm -lkernel -lSceGnmDriver -lSceVideoOut`.
+  Generic builds provide host-test submit stubs; Orbis builds intentionally
+  resolve `sceGnmSubmit*` through firmware `libSceGnmDriver`.
+- Verification passed for generic CMake/CTest, installed C and C++ header
+  compile checks through pkg-config flags, and Orbis backend syntax checks with
+  `OPENGNM_ORBIS`.
 
 ### Compatibility Audit: ABI and PM4 Edge Cases [DONE — 2026-07-03]
 
