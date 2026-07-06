@@ -21,21 +21,14 @@ extern "C" {
  * OrbisKernelEqueue / OrbisKernelEvent are replaced with void* because
  * opengnm does not ship Sony kernel headers.
  */
-
-/* =========================================================================
- * SceGnmDrawFlags (from the PS4 SDK ABI)
- * ========================================================================= */
+/* SceGnmDrawFlags (from the PS4 SDK ABI) */
 typedef struct {
 	uint32_t predication : 1;
 	uint32_t _unused : 28;
 	uint32_t rendertargetsliceoffset : 3;
 } SceGnmDrawFlags;
 _Static_assert(sizeof(SceGnmDrawFlags) == 0x4, "");
-
-
-/* =========================================================================
- * Draw commands
- * ========================================================================= */
+/* Draw commands */
 int32_t PS4_SYSV_ABI sceGnmDrawIndex(uint32_t* cmdbuf, uint32_t size,
                                      uint32_t index_count, uintptr_t index_addr,
                                      uint32_t flags, uint32_t type);
@@ -78,11 +71,7 @@ int32_t PS4_SYSV_ABI sceGnmDrawIndirectMulti(uint32_t* cmdbuf, uint32_t size,
                                              uint32_t instance_sgpr_offset,
                                              uint32_t flags);
 int PS4_SYSV_ABI sceGnmDrawOpaqueAuto(void);
-
-
-/* =========================================================================
- * Dispatch commands
- * ========================================================================= */
+/* Dispatch commands */
 int32_t PS4_SYSV_ABI sceGnmDispatchDirect(uint32_t* cmdbuf, uint32_t size,
                                           uint32_t threads_x,
                                           uint32_t threads_y,
@@ -95,11 +84,7 @@ int32_t PS4_SYSV_ABI sceGnmDispatchIndirectOnMec(uint32_t* cmdbuf,
                                                  uint32_t size,
                                                  uintptr_t args,
                                                  uint32_t modifier);
-
-
-/* =========================================================================
- * Shader set commands
- * ========================================================================= */
+/* Shader set commands */
 int32_t PS4_SYSV_ABI sceGnmSetCsShader(uint32_t* cmdbuf, uint32_t size,
                                        const uint32_t* cs_regs);
 int32_t PS4_SYSV_ABI sceGnmSetCsShaderWithModifier(uint32_t* cmdbuf,
@@ -133,11 +118,7 @@ int32_t PS4_SYSV_ABI sceGnmSetPsShader350(uint32_t* cmdbuf, uint32_t size,
 int32_t PS4_SYSV_ABI sceGnmSetVsShader(uint32_t* cmdbuf, uint32_t size,
                                        const uint32_t* vs_regs,
                                        uint32_t shader_modifier);
-
-
-/* =========================================================================
- * Shader update commands
- * ========================================================================= */
+/* Shader update commands */
 int32_t PS4_SYSV_ABI sceGnmUpdateGsShader(uint32_t* cmdbuf, uint32_t size,
                                           const uint32_t* gs_regs);
 int PS4_SYSV_ABI sceGnmUpdateHsShader(uint32_t* cmdbuf, uint32_t size,
@@ -150,11 +131,7 @@ int32_t PS4_SYSV_ABI sceGnmUpdatePsShader350(uint32_t* cmdbuf, uint32_t size,
 int32_t PS4_SYSV_ABI sceGnmUpdateVsShader(uint32_t* cmdbuf, uint32_t size,
                                           const uint32_t* vs_regs,
                                           uint32_t shader_modifier);
-
-
-/* =========================================================================
- * Submit commands
- * ========================================================================= */
+/* Submit commands */
 int PS4_SYSV_ABI sceGnmAreSubmitsAllowed(void);
 int PS4_SYSV_ABI sceGnmRequestFlipAndSubmitDone(void);
 int PS4_SYSV_ABI sceGnmRequestFlipAndSubmitDoneForWorkload(void);
@@ -177,11 +154,7 @@ int PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload(
     uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
     uint32_t* ccb_sizes_in_bytes);
 int PS4_SYSV_ABI sceGnmSubmitDone(void);
-
-
-/* =========================================================================
- * Init / default hardware state
- * ========================================================================= */
+/* Init / default hardware state */
 uint32_t PS4_SYSV_ABI sceGnmDispatchInitDefaultHardwareState(uint32_t* cmdbuf,
                                                              uint32_t size);
 uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState(uint32_t* cmdbuf,
@@ -199,11 +172,7 @@ uint32_t PS4_SYSV_ABI sceGnmDrawInitToDefaultContextState400(uint32_t* cmdbuf,
 int PS4_SYSV_ABI sceGnmDrawInitToDefaultContextStateInternalCommand(
     uint32_t* cmdbuf, uint32_t size);
 int PS4_SYSV_ABI sceGnmDrawInitToDefaultContextStateInternalSize(void);
-
-
-/* =========================================================================
- * SDMA commands
- * ========================================================================= */
+/* SDMA commands */
 int PS4_SYSV_ABI sceGnmSdmaClose(void);
 int PS4_SYSV_ABI sceGnmSdmaConstFill(void);
 int PS4_SYSV_ABI sceGnmSdmaCopyLinear(void);
@@ -212,11 +181,7 @@ int PS4_SYSV_ABI sceGnmSdmaCopyWindow(void);
 int PS4_SYSV_ABI sceGnmSdmaFlush(void);
 int PS4_SYSV_ABI sceGnmSdmaGetMinCmdSize(void);
 int PS4_SYSV_ABI sceGnmSdmaOpen(void);
-
-
-/* =========================================================================
- * Compute queue management
- * ========================================================================= */
+/* Compute queue management */
 int32_t PS4_SYSV_ABI sceGnmComputeWaitOnAddress(uint32_t* cmdbuf,
                                                 uint32_t size,
                                                 uintptr_t addr,
@@ -236,11 +201,7 @@ int PS4_SYSV_ABI sceGnmMapComputeQueueWithPriority(
     uint32_t pipe_id, uint32_t queue_id, uintptr_t ring_base_addr,
     uint32_t ring_size_dw, uint32_t* read_ptr_addr, uint32_t pipePriority);
 int PS4_SYSV_ABI sceGnmUnmapComputeQueue(uint32_t vqid);
-
-
-/* =========================================================================
- * VGT / wave control
- * ========================================================================= */
+/* VGT / wave control */
 int32_t PS4_SYSV_ABI sceGnmResetVgtControl(uint32_t* cmdbuf, uint32_t size);
 int32_t PS4_SYSV_ABI sceGnmSetVgtControl(uint32_t* cmdbuf, uint32_t size,
                                          uint32_t prim_group_sz_minus_one,
@@ -250,11 +211,7 @@ int PS4_SYSV_ABI sceGnmSetWaveLimitMultiplier(void);
 int PS4_SYSV_ABI sceGnmSetWaveLimitMultipliers(void);
 int PS4_SYSV_ABI sceGnmSetSpiEnableSqCounters(void);
 int PS4_SYSV_ABI sceGnmSetSpiEnableSqCountersForUnitInstance(void);
-
-
-/* =========================================================================
- * Validation
- * ========================================================================= */
+/* Validation */
 int32_t PS4_SYSV_ABI sceGnmValidateCommandBuffers(void);
 int PS4_SYSV_ABI sceGnmValidateDisableDiagnostics(void);
 int PS4_SYSV_ABI sceGnmValidateDisableDiagnostics2(void);
@@ -266,11 +223,7 @@ int PS4_SYSV_ABI sceGnmValidateGetVersion(void);
 bool PS4_SYSV_ABI sceGnmValidateOnSubmitEnabled(void);
 int PS4_SYSV_ABI sceGnmValidateResetState(void);
 int PS4_SYSV_ABI sceGnmValidationRegisterMemoryCheckCallback(void);
-
-
-/* =========================================================================
- * Resource registration
- * ========================================================================= */
+/* Resource registration */
 int32_t PS4_SYSV_ABI sceGnmFindResourcesPublic(void);
 int PS4_SYSV_ABI sceGnmFindResources(void);
 int PS4_SYSV_ABI sceGnmGetResourceBaseAddressAndSizeInBytes(void);
@@ -293,31 +246,19 @@ int PS4_SYSV_ABI sceGnmSetResourceUserData(void);
 int PS4_SYSV_ABI sceGnmUnregisterAllResourcesForOwner(void);
 int PS4_SYSV_ABI sceGnmUnregisterOwnerAndResources(void);
 int PS4_SYSV_ABI sceGnmUnregisterResource(void);
-
-
-/* =========================================================================
- * Workload management
- * ========================================================================= */
+/* Workload management */
 int PS4_SYSV_ABI sceGnmBeginWorkload(uint32_t workload_stream,
                                       uint64_t* workload);
 int PS4_SYSV_ABI sceGnmCreateWorkloadStream(uint64_t param1,
                                             uint32_t* workload_stream);
 int PS4_SYSV_ABI sceGnmDestroyWorkloadStream(void);
 int PS4_SYSV_ABI sceGnmEndWorkload(uint64_t workload);
-
-
-/* =========================================================================
- * Event queue
- * ========================================================================= */
+/* Event queue */
 int32_t PS4_SYSV_ABI sceGnmAddEqEvent(void* eq, uint64_t id, void* udata);
 int32_t PS4_SYSV_ABI sceGnmDeleteEqEvent(void* eq, uint64_t id);
 int PS4_SYSV_ABI sceGnmGetEqEventType(const void* ev);
 int PS4_SYSV_ABI sceGnmGetEqTimeStamp(void);
-
-
-/* =========================================================================
- * Thread trace (Sqtt)
- * ========================================================================= */
+/* Thread trace (Sqtt) */
 int PS4_SYSV_ABI sceGnmInsertThreadTraceMarker(void);
 int PS4_SYSV_ABI sceGnmSqttFini(void);
 int PS4_SYSV_ABI sceGnmSqttFinishTrace(void);
@@ -346,11 +287,7 @@ int PS4_SYSV_ABI sceGnmSqttStopTrace(void);
 int PS4_SYSV_ABI sceGnmSqttSwitchTraceBuffer(void);
 int PS4_SYSV_ABI sceGnmSqttSwitchTraceBuffer2(void);
 int PS4_SYSV_ABI sceGnmSqttWaitForEvent(void);
-
-
-/* =========================================================================
- * Performance monitoring (Spm)
- * ========================================================================= */
+/* Performance monitoring (Spm) */
 int PS4_SYSV_ABI sceGnmSpmEndSpm(void);
 int PS4_SYSV_ABI sceGnmSpmInit(void);
 int PS4_SYSV_ABI sceGnmSpmInit2(void);
@@ -361,11 +298,7 @@ int PS4_SYSV_ABI sceGnmSpmSetSelectCounter(void);
 int PS4_SYSV_ABI sceGnmSpmSetSpmSelects(void);
 int PS4_SYSV_ABI sceGnmSpmSetSpmSelects2(void);
 int PS4_SYSV_ABI sceGnmSpmStartSpm(void);
-
-
-/* =========================================================================
- * Debugger
- * ========================================================================= */
+/* Debugger */
 int PS4_SYSV_ABI sceGnmDebugHardwareStatus(void);
 int PS4_SYSV_ABI sceGnmDebugModuleReset(void);
 int PS4_SYSV_ABI sceGnmDebugReset(void);
@@ -386,11 +319,7 @@ int PS4_SYSV_ABI sceRazorCaptureCommandBuffersOnlySinceLastFlip(void);
 int PS4_SYSV_ABI sceRazorCaptureImmediate(void);
 int PS4_SYSV_ABI sceRazorCaptureSinceLastFlip(void);
 bool PS4_SYSV_ABI sceRazorIsLoaded(void);
-
-
-/* =========================================================================
- * Markers
- * ========================================================================= */
+/* Markers */
 int32_t PS4_SYSV_ABI sceGnmInsertDingDongMarker(uint32_t* cmdbuf,
                                                 uint32_t size);
 int32_t PS4_SYSV_ABI sceGnmInsertPopMarker(uint32_t* cmdbuf, uint32_t size);
@@ -406,11 +335,7 @@ int32_t PS4_SYSV_ABI sceGnmInsertSetMarker(uint32_t* cmdbuf, uint32_t size,
 int32_t PS4_SYSV_ABI sceGnmInsertWaitFlipDone(uint32_t* cmdbuf, uint32_t size,
                                               int32_t vo_handle,
                                               uint32_t buf_idx);
-
-
-/* =========================================================================
- * Coredump / misc
- * ========================================================================= */
+/* Coredump / misc */
 void PS4_SYSV_ABI sceGnmFlushGarlic(void);
 int PS4_SYSV_ABI sceGnmGetCoredumpAddress(void);
 int PS4_SYSV_ABI sceGnmGetCoredumpMode(void);
@@ -431,11 +356,7 @@ uintptr_t
 sceGnmGetTheTessellationFactorRingBufferBaseAddress(void) PS4_SYSV_ABI;
 int PS4_SYSV_ABI sceGnmIsCoredumpValid(void);
 int PS4_SYSV_ABI sceGnmRaiseUserExceptionEvent(void);
-
-
-/* =========================================================================
- * Driver internal
- * ========================================================================= */
+/* Driver internal */
 bool PS4_SYSV_ABI sceGnmDriverCaptureInProgress(void);
 uint32_t PS4_SYSV_ABI sceGnmDriverInternalRetrieveGnmInterface(void);
 uint32_t PS4_SYSV_ABI
@@ -453,11 +374,7 @@ int PS4_SYSV_ABI sceGnmDriverInternalVirtualQuery(void);
 bool PS4_SYSV_ABI sceGnmDriverTraceInProgress(void);
 int PS4_SYSV_ABI sceGnmDriverTriggerCapture(void);
 void PS4_SYSV_ABI sceGnmRegisterGnmLiveCallbackConfig(void);
-
-
-/* =========================================================================
- * Logical CU / GPU PA
- * ========================================================================= */
+/* Logical CU / GPU PA */
 void PS4_SYSV_ABI sceGnmGpuPaDebugEnter(void);
 void PS4_SYSV_ABI sceGnmGpuPaDebugLeave(void);
 bool PS4_SYSV_ABI sceGnmIsUserPaEnabled(void);
@@ -468,19 +385,11 @@ int PS4_SYSV_ABI sceGnmLogicalTcaUnitToPhysical(void);
 int PS4_SYSV_ABI sceGnmPaDisableFlipCallbacks(void);
 int PS4_SYSV_ABI sceGnmPaEnableFlipCallbacks(void);
 int PS4_SYSV_ABI sceGnmPaHeartbeat(void);
-
-
-/* =========================================================================
- * Mip stats
- * ========================================================================= */
+/* Mip stats */
 int PS4_SYSV_ABI sceGnmDisableMipStatsReport(void);
 int PS4_SYSV_ABI sceGnmRequestMipStatsReportAndReset(void);
 int PS4_SYSV_ABI sceGnmSetupMipStatsReport(void);
-
-
-/* =========================================================================
- * Miscellaneous (unnamed NID-only exports from the same module)
- * ========================================================================= */
+/* Miscellaneous (unnamed NID-only exports from the same module) */
 int PS4_SYSV_ABI Func_063D065A2D6359C3(void);
 int PS4_SYSV_ABI Func_0CABACAFB258429D(void);
 int PS4_SYSV_ABI Func_150CF336FC2E99A3(void);
@@ -520,15 +429,14 @@ int PS4_SYSV_ABI Func_81037019ECCD0E01(void);
 int PS4_SYSV_ABI Func_BFB41C057478F0BF(void);
 int PS4_SYSV_ABI Func_E51D44DB8151238C(void);
 int PS4_SYSV_ABI Func_F916890425496553(void);
-
-/* =========================================================================
- * Internal PM4 packet builder wrappers (sceGnmDriver*)
+/*
+ * Internal PM4 packet builder wrappers (sceGnmDriver*).
  *
  * These are the packet-building functions that drawcommandbuffer.c calls.
  * On orbis, they delegate to the firmware's sceGnm* functions.
  * On generic, they emit PM4 packets directly.
  * These match the original driver.h API surface.
- * ========================================================================= */
+ */
 int32_t sceGnmDriverDrawInitDefaultHardwareState350(
     uint32_t* cmd, uint32_t numdwords
 );

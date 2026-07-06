@@ -27,11 +27,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-/* ======================================================================
- *  PM4 register-setting helpers (shared by all packet builders)
- * ====================================================================== */
-
+/* PM4 register-setting helpers (shared by all packet builders). */
 static uint32_t setcontextregisterrange(
     uint32_t* cmd, uint32_t regaddr, const uint32_t* regvalues,
     uint32_t numvalues
@@ -144,15 +140,12 @@ static uint32_t drawinitiator(SceGnmDrawFlags flags, uint32_t source_select) {
 	}
 	return source_select;
 }
-
-
-/* ======================================================================
- *  Part 1: sceGnmDriver* PM4 packet builder wrappers
+/*
+ * Part 1: sceGnmDriver* PM4 packet builder wrappers.
  *
- *  These emit PM4 packets directly into the command buffer, matching
- *  the firmware's packet formats (RE-1, RE-2).
- * ====================================================================== */
-
+ * These emit PM4 packets directly into the command buffer, matching
+ * the firmware's packet formats (RE-1, RE-2).
+ */
 int32_t sceGnmDriverDrawInitDefaultHardwareState350(
     uint32_t* cmd, uint32_t numdwords
 ) {
@@ -805,17 +798,14 @@ int32_t sceGnmDriverInsertWaitFlipDone(
 
 	return GNM_ERROR_OK;
 }
-
-
-/* ======================================================================
- *  Part 2: Real sceGnm* functions
+/*
+ * Part 2: Real sceGnm* functions.
  *
- *  Draw/Dispatch/Shader-set/Shader-update/Init functions emit PM4
- *  directly (delegating to the sceGnmDriver* wrappers above).
- *  Submit/Compute-queue/VGT/Markers/EQ/Workload return error or OK
- *  (no real hardware on generic platform).
- * ====================================================================== */
-
+ * Draw/Dispatch/Shader-set/Shader-update/Init functions emit PM4
+ * directly (delegating to the sceGnmDriver* wrappers above).
+ * Submit/Compute-queue/VGT/Markers/EQ/Workload return error or OK
+ * (no real hardware on generic platform).
+ */
 /* --- Draw functions --- */
 
 int32_t PS4_SYSV_ABI sceGnmDrawIndex(uint32_t* cmdbuf, uint32_t size,
@@ -1839,12 +1829,7 @@ int PS4_SYSV_ABI sceGnmCreateWorkloadStream(uint64_t param1,
 int PS4_SYSV_ABI sceGnmDestroyWorkloadStream(void) {
 	return GNM_ERROR_OK;
 }
-
-
-/* ======================================================================
- *  Part 3: Stub functions (same return values as orbis backend)
- * ====================================================================== */
-
+/* Part 3: Stub functions (same return values as orbis backend). */
 /* --- SDMA --- */
 int PS4_SYSV_ABI sceGnmSdmaOpen(void) { return ORBIS_GNM_ERROR_FAILURE; }
 int PS4_SYSV_ABI sceGnmSdmaClose(void) { return ORBIS_GNM_ERROR_FAILURE; }
@@ -2047,12 +2032,7 @@ int PS4_SYSV_ABI Func_81037019ECCD0E01(void) { return 0; }
 int PS4_SYSV_ABI Func_BFB41C057478F0BF(void) { return 0; }
 int PS4_SYSV_ABI Func_E51D44DB8151238C(void) { return 0; }
 int PS4_SYSV_ABI Func_F916890425496553(void) { return 0; }
-
-
-/* ======================================================================
- *  Part 4: Validate stubs (return 0, same as orbis)
- * ====================================================================== */
-
+/* Part 4: Validate stubs (return 0, same as orbis). */
 int32_t PS4_SYSV_ABI sceGnmValidateCommandBuffers(void) { return 0; }
 int PS4_SYSV_ABI sceGnmValidateDisableDiagnostics(void) { return 0; }
 int PS4_SYSV_ABI sceGnmValidateDisableDiagnostics2(void) { return 0; }

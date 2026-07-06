@@ -6,6 +6,8 @@
 
 #include "gnm_rendertarget.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 /* Define the struct type so other headers can reference GnmCommandBuffer* */
 typedef struct GnmCommandBuffer GnmCommandBuffer;
 
@@ -49,5 +51,7 @@ static inline void sceGnmCmdReset(GnmCommandBuffer* cmd) {
 void* sceGnmCmdAllocInside(
     GnmCommandBuffer* cmd, uint32_t size, uint32_t alignment
 );
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_COMMANDBUFFER_H_ */

@@ -70,6 +70,32 @@ make
 make install DESTDIR=$OO_PS4_TOOLCHAIN
 ```
 
+When linking a PS4 target, link `opengnm` together with the firmware libraries
+it delegates to:
+
+```sh
+-lopengnm -lkernel -lSceGnmDriver -lSceVideoOut
+```
+
+The Orbis backend forwards submit and flip paths to firmware-provided
+`sceGnmSubmit*` exports in `libSceGnmDriver`. The generic backend provides host
+test no-op implementations, but an Orbis archive is expected to keep those
+symbols resolved by the platform SDK libraries.
+
+### Installed Consumers
+
+OpenGNM installs a CMake package and pkg-config file:
+
+```cmake
+find_package(opengnm CONFIG REQUIRED)
+target_link_libraries(my_renderer PRIVATE opengnm::opengnm)
+```
+
+```sh
+cc $(pkg-config --cflags opengnm) -c renderer.c
+cc renderer.o $(pkg-config --libs --static opengnm)
+```
+
 ### Docker
 
 ```sh
@@ -88,6 +114,18 @@ using `gnm*` names, or switch its include path to opengnm and keep core includes
 such as `<gnm/drawcommandbuffer.h>`, `<gnm/platform.h>`, and
 `<gnm/gpuaddr/gpuaddr.h>`. The compatibility layer is source-only: linked
 objects still call the Sony SDK-style `sceGnm*` / `sceGpa*` symbols.
+
+## Renderer Helper API
+
+`<gnm_helpers.h>` provides small convenience APIs for renderer backends such as
+bgfx:
+
+- direct-memory allocation/mapping with a host fallback for tests
+- VideoOut backbuffer layout helpers, plus Orbis registration/flip helpers when
+  OpenOrbis VideoOut/libkernel headers are available
+- 2D texture and color render-target descriptor setup with size/alignment output
+- shader binary metadata extraction for vertex and pixel shader headers
+- command-buffer range validation and diagnostic messages
 
 ## License
 

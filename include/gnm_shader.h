@@ -4,6 +4,8 @@
 #include "gnm_error.h"
 #include "gnm_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 typedef enum {
 	GNM_SHINPUTUSAGE_IMM_RESOURCE = 0x0,
 	GNM_SHINPUTUSAGE_IMM_SAMPLER = 0x1,
@@ -280,5 +282,7 @@ GnmError sceGnmCreateFetchShader(
 void sceGnmVsRegsSetFetchShaderModifier(
     GnmVsStageRegisters* regs, const GnmFetchShaderResults* r
 );
+
+OPENGNM_EXTERN_C_END
 
 #endif	// _GNM_SHADER_H_

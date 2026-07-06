@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
-project(opengnm C)
+project(opengnm VERSION 0.1.0 LANGUAGES C)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 # opengnm — clean-rewrite PS4 GNM library
 # sceGnm*/sceGpa* drop-in API compatibility with the Sony official PS4 SDK.
@@ -26,6 +29,7 @@ set(OPENGNM_SOURCES
     src/depthrendertarget.c
     src/drawcommandbuffer.c
     src/error.c
+    src/helpers.c
     src/rendertarget.c
     src/shader.c
     src/texture.c
@@ -79,9 +83,11 @@ else()
 endif()
 
 add_library(opengnm STATIC ${OPENGNM_SOURCES})
+add_library(opengnm::opengnm ALIAS opengnm)
 
 target_include_directories(opengnm PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 target_include_directories(opengnm PRIVATE
@@ -94,7 +100,7 @@ endif()
 
 if(OPENGNM_ORBIS_PLATFORM)
     target_compile_definitions(opengnm PUBLIC OPENGNM_ORBIS OPENGNM_REQUIRE_ABI)
-    target_link_libraries(opengnm PUBLIC kernel SceGnmDriver)
+    target_link_libraries(opengnm PUBLIC kernel SceGnmDriver SceVideoOut)
 else()
     target_compile_definitions(opengnm PUBLIC OPENGNM_GENERIC)
 endif()
@@ -111,6 +117,7 @@ if(OPENGNM_BUILD_TESTS)
         tests/test_validate.c
         tests/test_api.c
         tests/test_compat.c
+        tests/test_helpers.c
         tests/test_pm4.c
     )
     target_link_libraries(opengnm_tests PRIVATE opengnm)
@@ -126,7 +133,41 @@ if(OPENGNM_BUILD_TESTS)
 endif()
 
 # === Install ===
-include(GNUInstallDirs)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.h")
-install(TARGETS opengnm ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+install(TARGETS opengnm
+        EXPORT opengnmTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(EXPORT opengnmTargets
+        NAMESPACE opengnm::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/opengnm)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/opengnmConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/opengnmConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/opengnm
+)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/opengnmConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/opengnmConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/opengnmConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/opengnm)
+
+if(OPENGNM_ORBIS_PLATFORM)
+    set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "-lkernel -lSceGnmDriver -lSceVideoOut")
+else()
+    set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "")
+endif()
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/opengnm.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/opengnm.pc
+    @ONLY
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/opengnm.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)

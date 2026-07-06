@@ -8,6 +8,8 @@
 #include "gnm_types.h"
 #include "pm4/gpuaddr_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 typedef struct {
 	GnmDataFormat format;
 	GnmTextureType texturetype;
@@ -82,14 +84,15 @@ static inline void* sceGnmTexGetBaseAddress(const GnmTexture* tex) {
 void sceGnmTexSetBaseAddress(GnmTexture* tex, void* baseaddr);
 
 static inline GnmDataFormat sceGnmTexGetFormat(const GnmTexture* tex) {
-	return (GnmDataFormat){
-	    .surfacefmt = tex->dataformat,
-	    .chantype = tex->numformat,
-	    .chanx = tex->dstselx,
-	    .chany = tex->dstsely,
-	    .chanz = tex->dstselz,
-	    .chanw = tex->dstselw,
-	};
+	GnmDataFormat fmt;
+	fmt.asuint = 0;
+	fmt.surfacefmt = tex->dataformat;
+	fmt.chantype = tex->numformat;
+	fmt.chanx = tex->dstselx;
+	fmt.chany = tex->dstsely;
+	fmt.chanz = tex->dstselz;
+	fmt.chanw = tex->dstselw;
+	return fmt;
 }
 static inline void sceGnmTexSetFormat(GnmTexture* tex, GnmDataFormat df) {
 	tex->dataformat = df.surfacefmt;
@@ -167,24 +170,26 @@ static inline void sceGnmTexSetMemoryType(
 }
 
 static inline GpaTextureInfo sceGnmTexBuildInfo(const GnmTexture* tex) {
-	return (GpaTextureInfo){
-	    .type = tex->type,
-	    .fmt = sceGnmTexGetFormat(tex),
-	    .width = sceGnmTexGetWidth(tex),
-	    .height = sceGnmTexGetHeight(tex),
-	    .pitch = sceGnmTexGetPitch(tex),
-	    .depth = sceGnmTexGetDepth(tex),
-	    .numfrags = sceGnmTexGetNumFragments(tex),
-	    .nummips = sceGnmTexGetNumMips(tex),
-	    .numslices = sceGnmTexGetNumArraySlices(tex),
-	    .tm = tex->tilingindex,
-	    .mingpumode = tex->alttilemode ? GNM_GPU_NEO : GNM_GPU_BASE,
-	    .pow2pad = tex->pow2pad,
-	};
+	GpaTextureInfo info;
+	info.type = (GnmTextureType)tex->type;
+	info.fmt = sceGnmTexGetFormat(tex);
+	info.width = sceGnmTexGetWidth(tex);
+	info.height = sceGnmTexGetHeight(tex);
+	info.pitch = sceGnmTexGetPitch(tex);
+	info.depth = sceGnmTexGetDepth(tex);
+	info.numfrags = sceGnmTexGetNumFragments(tex);
+	info.nummips = sceGnmTexGetNumMips(tex);
+	info.numslices = sceGnmTexGetNumArraySlices(tex);
+	info.tm = (GnmTileMode)tex->tilingindex;
+	info.mingpumode = tex->alttilemode ? GNM_GPU_NEO : GNM_GPU_BASE;
+	info.pow2pad = tex->pow2pad;
+	return info;
 }
 
 GnmError sceGnmTexCalcByteSize(
     uint64_t* outsize, uint32_t* outalignment, const GnmTexture* tex
 );
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_TEXTURE_H_ */

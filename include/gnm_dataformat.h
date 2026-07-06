@@ -5,6 +5,8 @@
 
 #include "gnm_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 typedef union {
 	struct {
 		GnmImageFormat surfacefmt : 8;
@@ -19,22 +21,25 @@ typedef union {
 } GnmDataFormat;
 _Static_assert(sizeof(GnmDataFormat) == 0x4, "");
 
+#define GNM_DATA_FORMAT_INIT(_surfacefmt, _chantype, _chanx, _chany, _chanz, _chanw) \
+	{{(_surfacefmt), (_chantype), (_chanx), (_chany), (_chanz), (_chanw), 0}}
+
 GnmDataFormat sceGnmDfInitFromFmask(uint32_t numsamples, uint32_t numfrags);
 GnmDataFormat sceGnmDfInitFromZ(GnmZFormat zfmt);
 
 static inline GnmDataFormat sceGnmDfInitFromStencil(
     GnmStencilFormat stencilfmt, GnmImgNumFormat chantype
 ) {
-	GnmDataFormat res = {
-	    .surfacefmt = stencilfmt == GNM_STENCIL_8
-			      ? GNM_IMG_DATA_FORMAT_8
-			      : GNM_IMG_DATA_FORMAT_INVALID,
-	    .chantype = chantype,
-	    .chanx = GNM_CHAN_X,
-	    .chany = GNM_CHAN_X,
-	    .chanz = GNM_CHAN_X,
-	    .chanw = GNM_CHAN_X,
-	};
+	GnmDataFormat res =
+	    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_INVALID, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_X, GNM_CHAN_X, GNM_CHAN_X);
+	res.surfacefmt = stencilfmt == GNM_STENCIL_8
+			     ? GNM_IMG_DATA_FORMAT_8
+			     : GNM_IMG_DATA_FORMAT_INVALID;
+	res.chantype = chantype;
+	res.chanx = GNM_CHAN_X;
+	res.chany = GNM_CHAN_X;
+	res.chanz = GNM_CHAN_X;
+	res.chanw = GNM_CHAN_X;
 	return res;
 }
 
@@ -131,221 +136,61 @@ static inline uint32_t sceGnmDfGetTexelsPerElementTall(const GnmDataFormat fmt) 
 }
 
 /* Predefined format constants */
-static const GnmDataFormat GNM_FMT_INVALID = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_INVALID,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_CONSTANT0,
-    .chany = GNM_CHAN_CONSTANT0,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_CONSTANT0,
-};
-static const GnmDataFormat GNM_FMT_R8_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_CONSTANT0,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_A8_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_CONSTANT0,
-    .chany = GNM_CHAN_CONSTANT0,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_X,
-};
-static const GnmDataFormat GNM_FMT_R8G8B8A8_SRGB = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8_8_8_8,
-    .chantype = GNM_IMG_NUM_FORMAT_SRGB,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R8G8B8A8_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8_8_8_8,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R8G8B8A8_UINT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8_8_8_8,
-    .chantype = GNM_IMG_NUM_FORMAT_UINT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_B8G8R8A8_SRGB = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8_8_8_8,
-    .chantype = GNM_IMG_NUM_FORMAT_SRGB,
-    .chanx = GNM_CHAN_Z,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_X,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_B8G8R8A8_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_8_8_8_8,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_Z,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_X,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R16_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_16,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_CONSTANT0,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_R16G16_FLOAT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_16_16,
-    .chantype = GNM_IMG_NUM_FORMAT_FLOAT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_R16G16B16A16_SRGB = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_16_16_16_16,
-    .chantype = GNM_IMG_NUM_FORMAT_SRGB,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R16G16B16A16_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_16_16_16_16,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R16G16B16A16_FLOAT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_16_16_16_16,
-    .chantype = GNM_IMG_NUM_FORMAT_FLOAT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R32_FLOAT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32,
-    .chantype = GNM_IMG_NUM_FORMAT_FLOAT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_CONSTANT0,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_R32G32_FLOAT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32_32,
-    .chantype = GNM_IMG_NUM_FORMAT_FLOAT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_CONSTANT0,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_R32G32B32_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32_32_32,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_CONSTANT0,
-};
-static const GnmDataFormat GNM_FMT_R32G32B32_FLOAT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32_32_32,
-    .chantype = GNM_IMG_NUM_FORMAT_FLOAT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_R32G32B32A32_SRGB = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32_32_32_32,
-    .chantype = GNM_IMG_NUM_FORMAT_SRGB,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R32G32B32A32_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32_32_32_32,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_R32G32B32A32_FLOAT = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_32_32_32_32,
-    .chantype = GNM_IMG_NUM_FORMAT_FLOAT,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_BC1_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC1,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_BC1_SRGB = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC1,
-    .chantype = GNM_IMG_NUM_FORMAT_SRGB,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_BC3_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC3,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_BC6_SNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC6,
-    .chantype = GNM_IMG_NUM_FORMAT_SNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_BC6_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC6,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_CONSTANT1,
-};
-static const GnmDataFormat GNM_FMT_BC7_UNORM = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC7,
-    .chantype = GNM_IMG_NUM_FORMAT_UNORM,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
-static const GnmDataFormat GNM_FMT_BC7_SRGB = {
-    .surfacefmt = GNM_IMG_DATA_FORMAT_BC7,
-    .chantype = GNM_IMG_NUM_FORMAT_SRGB,
-    .chanx = GNM_CHAN_X,
-    .chany = GNM_CHAN_Y,
-    .chanz = GNM_CHAN_Z,
-    .chanw = GNM_CHAN_W,
-};
+static const GnmDataFormat GNM_FMT_INVALID =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_INVALID, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0);
+static const GnmDataFormat GNM_FMT_R8_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_A8_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_X);
+static const GnmDataFormat GNM_FMT_R8G8B8A8_SRGB =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8_8_8_8, GNM_IMG_NUM_FORMAT_SRGB, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R8G8B8A8_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8_8_8_8, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R8G8B8A8_UINT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8_8_8_8, GNM_IMG_NUM_FORMAT_UINT, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_B8G8R8A8_SRGB =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8_8_8_8, GNM_IMG_NUM_FORMAT_SRGB, GNM_CHAN_Z, GNM_CHAN_Y, GNM_CHAN_X, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_B8G8R8A8_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_8_8_8_8, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_Z, GNM_CHAN_Y, GNM_CHAN_X, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R16_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_16, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_R16G16_FLOAT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_16_16, GNM_IMG_NUM_FORMAT_FLOAT, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_R16G16B16A16_SRGB =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_16_16_16_16, GNM_IMG_NUM_FORMAT_SRGB, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R16G16B16A16_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_16_16_16_16, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R16G16B16A16_FLOAT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_16_16_16_16, GNM_IMG_NUM_FORMAT_FLOAT, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R32_FLOAT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32, GNM_IMG_NUM_FORMAT_FLOAT, GNM_CHAN_X, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_R32G32_FLOAT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32_32, GNM_IMG_NUM_FORMAT_FLOAT, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_CONSTANT0, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_R32G32B32_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32_32_32, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_CONSTANT0);
+static const GnmDataFormat GNM_FMT_R32G32B32_FLOAT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32_32_32, GNM_IMG_NUM_FORMAT_FLOAT, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_R32G32B32A32_SRGB =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32_32_32_32, GNM_IMG_NUM_FORMAT_SRGB, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R32G32B32A32_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32_32_32_32, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_R32G32B32A32_FLOAT =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_32_32_32_32, GNM_IMG_NUM_FORMAT_FLOAT, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_BC1_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC1, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_BC1_SRGB =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC1, GNM_IMG_NUM_FORMAT_SRGB, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_BC3_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC3, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_BC6_SNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC6, GNM_IMG_NUM_FORMAT_SNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_BC6_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC6, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_CONSTANT1);
+static const GnmDataFormat GNM_FMT_BC7_UNORM =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC7, GNM_IMG_NUM_FORMAT_UNORM, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+static const GnmDataFormat GNM_FMT_BC7_SRGB =
+    GNM_DATA_FORMAT_INIT(GNM_IMG_DATA_FORMAT_BC7, GNM_IMG_NUM_FORMAT_SRGB, GNM_CHAN_X, GNM_CHAN_Y, GNM_CHAN_Z, GNM_CHAN_W);
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_DATAFORMAT_H_ */

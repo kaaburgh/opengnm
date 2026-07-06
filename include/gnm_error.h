@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "gnm_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 /*
  * GNM error codes.
  * ORBIS_GNM_ERROR_* values match the Sony SDK and are returned by the
@@ -102,5 +104,7 @@ typedef void (*GnmMessageHandlerFunc)(
 void sceGnmSetMessageHandler(GnmMessageHandlerFunc handlerfunc, void* userdata);
 void sceGnmWriteMsg(GnmMessageSeverity sev, const char* msg);
 void sceGnmWriteMsgf(GnmMessageSeverity sev, const char* fmt, ...);
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_ERROR_H_ */

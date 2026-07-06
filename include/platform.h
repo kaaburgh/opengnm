@@ -5,6 +5,8 @@
 
 #include "gnm_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 GnmGpuMode PS4_SYSV_ABI sceGnmGpuMode(void);
 
 typedef struct {
@@ -16,5 +18,7 @@ typedef struct {
 
 void sceGnmPlatInit(GnmPlatParams* params);
 int32_t PS4_SYSV_ABI sceGnmPlatGetBufferLabelAddress(int32_t videohandle, uint64_t* outaddr);
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_PLATFORM_H_ */

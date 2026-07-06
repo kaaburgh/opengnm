@@ -11,6 +11,8 @@
 #include "gnm_shader.h"
 #include "gnm_texture.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 typedef struct {
 	float dmin;
 	float dmax;
@@ -233,5 +235,7 @@ void sceGnmDrawCmdBeginQuery(
 void sceGnmDrawCmdEndQuery(
     GnmCommandBuffer* cmd, uint64_t gpuaddr
 );
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_DRAWCOMMANDBUFFER_H_ */

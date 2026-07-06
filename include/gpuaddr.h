@@ -9,6 +9,8 @@
 #include "gnm_types.h"
 #include "pm4/gpuaddr_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 /* === GpuAddr error codes === */
 typedef enum {
 	GPA_ERR_OK = 0,
@@ -100,5 +102,7 @@ GpaError sceGpaTileTextureAll(
     const void* inbuf, size_t inlen, void* outbuf, size_t outlen,
     const GpaTextureInfo* texinfo, GnmTileMode newtiling
 );
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GPUADDR_H_ */

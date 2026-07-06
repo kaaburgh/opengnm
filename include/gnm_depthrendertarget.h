@@ -7,6 +7,8 @@
 #include "gnm_error.h"
 #include "gnm_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 typedef struct {
 	uint32_t enable_htile_acceleration : 1;
 	uint32_t enable_texture_without_decompress : 1;
@@ -240,5 +242,7 @@ static inline uint16_t sceGnmDrtGetHeight(const GnmDepthRenderTarget* drt) {
 static inline void sceGnmDrtSetHeight(GnmDepthRenderTarget* drt, uint16_t height) {
 	drt->size.height = height;
 }
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_DEPTHRENDERTARGET_H_ */

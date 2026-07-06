@@ -53,4 +53,7 @@
 /* Platform detection (GpuMode, buffer label address) */
 #include "platform.h"
 
+/* Convenience helpers for common app/renderer setup paths */
+#include "gnm_helpers.h"
+
 #endif /* _GNM_H_ */

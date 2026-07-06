@@ -9,7 +9,8 @@ OPENGNM_SRCS = \
 	src/shader.c \
 	src/dataformat.c \
 	src/commandbuffer.c \
-	src/error.c
+	src/error.c \
+	src/helpers.c
 
 ifeq ($(PLATFORM), orbis)
 OPENGNM_SRCS += \
@@ -95,6 +96,7 @@ TEST_SRCS = \
 	tests/test_validate.c \
 	tests/test_api.c \
 	tests/test_compat.c \
+	tests/test_helpers.c \
 	tests/test_pm4.c
 
 TEST_BIN = opengnm_tests

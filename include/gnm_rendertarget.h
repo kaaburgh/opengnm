@@ -8,6 +8,8 @@
 #include "gnm_types.h"
 #include "pm4/gpuaddr_types.h"
 
+OPENGNM_EXTERN_C_BEGIN
+
 typedef struct {
 	uint32_t enable_cmask_fastclear : 1;
 	uint32_t enable_fmask_compression : 1;
@@ -180,24 +182,26 @@ static inline uint8_t sceGnmRtGetNumFragments(const GnmRenderTarget* rt) {
 }
 
 static inline GpaTextureInfo sceGnmRtBuildInfo(const GnmRenderTarget* rt) {
-	return (GpaTextureInfo){
-	    .type = GNM_TEXTURE_2D,
-	    .fmt = sceGnmRtGetFormat(rt),
-	    .width = sceGnmRtGetPitch(rt),
-	    .height = sceGnmRtGetSliceSize(rt),
-	    .pitch = sceGnmRtGetPitch(rt),
-	    .depth = 1,
-	    .numfrags = sceGnmRtGetNumFragments(rt),
-	    .nummips = 1,
-	    .numslices = 1,
-	    .tm = rt->attrib.tilemode_index,
-	    .mingpumode = rt->info.alt_tile_mode ? GNM_GPU_NEO : GNM_GPU_BASE,
-	    .pow2pad = false,
-	};
+	GpaTextureInfo info;
+	info.type = GNM_TEXTURE_2D;
+	info.fmt = sceGnmRtGetFormat(rt);
+	info.width = sceGnmRtGetPitch(rt);
+	info.height = sceGnmRtGetSliceSize(rt);
+	info.pitch = sceGnmRtGetPitch(rt);
+	info.depth = 1;
+	info.numfrags = sceGnmRtGetNumFragments(rt);
+	info.nummips = 1;
+	info.numslices = 1;
+	info.tm = (GnmTileMode)rt->attrib.tilemode_index;
+	info.mingpumode = rt->info.alt_tile_mode ? GNM_GPU_NEO : GNM_GPU_BASE;
+	info.pow2pad = false;
+	return info;
 }
 
 GnmError sceGnmRtCalcByteSize(
     uint64_t* outsize, uint32_t* outalign, const GnmRenderTarget* rt
 );
+
+OPENGNM_EXTERN_C_END
 
 #endif /* _GNM_RENDERTARGET_H_ */

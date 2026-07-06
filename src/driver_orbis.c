@@ -38,15 +38,13 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-/* ======================================================================
- *  Part 1: Firmware extern declarations
+/*
+ * Part 1: Firmware extern declarations.
  *
- *  These declare the sceGnm* functions that have real implementations in
- *  the PS4 firmware (libSceGnmDriver.sprx). They are resolved at link time
- *  via -lSceGnmDriver NID stubs and at runtime by the PS4 dynamic linker.
- * ====================================================================== */
-
+ * These declare the sceGnm* functions that have real implementations in
+ * the PS4 firmware (libSceGnmDriver.sprx). They are resolved at link time
+ * via -lSceGnmDriver NID stubs and at runtime by the PS4 dynamic linker.
+ */
 /* Draw functions */
 extern int32_t sceGnmDrawIndexAuto(
     uint32_t* cmd, uint32_t numdwords, uint32_t indexcount, uint32_t flags);
@@ -223,15 +221,12 @@ extern int sceGnmBeginWorkload(uint32_t workloadstream, uint64_t* workload);
 extern int sceGnmEndWorkload(uint64_t workload);
 extern int sceGnmCreateWorkloadStream(uint64_t param1,
                                       uint32_t* workloadstream);
-
-
-/* ======================================================================
- *  Part 2: sceGnmDriver* forwarding wrappers
+/*
+ * Part 2: sceGnmDriver* forwarding wrappers.
  *
- *  These are opengnm-internal functions called by drawcommandbuffer.c.
- *  They forward to the firmware's sceGnm* functions (declared above).
- * ====================================================================== */
-
+ * These are opengnm-internal functions called by drawcommandbuffer.c.
+ * They forward to the firmware's sceGnm* functions (declared above).
+ */
 int32_t sceGnmDriverDrawInitDefaultHardwareState350(
     uint32_t* cmd, uint32_t numdwords
 ) {
@@ -360,15 +355,12 @@ int32_t sceGnmDriverInsertWaitFlipDone(
 	    cmd, numdwords, videohandle, displaybufidx
 	);
 }
-
-
-/* ======================================================================
- *  Part 3: Retail firmware stubs
+/*
+ * Part 3: Retail firmware stubs.
  *
- *  These functions are stubs on retail PS4 firmware. Return values match
- *  shadPS4's emulation of the real firmware behavior.
- * ====================================================================== */
-
+ * These functions are stubs on retail PS4 firmware. Return values match
+ * shadPS4's emulation of the real firmware behavior.
+ */
 /* --- SDMA (RE-7: 8 functions, all return ORBIS_GNM_ERROR_FAILURE) --- */
 
 int PS4_SYSV_ABI sceGnmSdmaOpen(void) {
@@ -851,12 +843,7 @@ int PS4_SYSV_ABI Func_81037019ECCD0E01(void) { return 0; }
 int PS4_SYSV_ABI Func_BFB41C057478F0BF(void) { return 0; }
 int PS4_SYSV_ABI Func_E51D44DB8151238C(void) { return 0; }
 int PS4_SYSV_ABI Func_F916890425496553(void) { return 0; }
-
-
-/* ======================================================================
- *  Part 4: Validate stubs — 11 functions (RE-3: all return 0 on FW 9.00)
- * ====================================================================== */
-
+/* Part 4: Validate stubs - 11 functions (RE-3: all return 0 on FW 9.00). */
 int32_t PS4_SYSV_ABI sceGnmValidateCommandBuffers(void) {
 	return 0;
 }

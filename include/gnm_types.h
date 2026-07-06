@@ -4,6 +4,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+#ifndef _Static_assert
+#define _Static_assert static_assert
+#endif
+#define OPENGNM_EXTERN_C_BEGIN extern "C" {
+#define OPENGNM_EXTERN_C_END }
+#else
+#define OPENGNM_EXTERN_C_BEGIN
+#define OPENGNM_EXTERN_C_END
+#endif
+
 /*
  * PS4 System V calling convention.
  * On x86_64 (both PS4 and host) this is the default, so the attribute

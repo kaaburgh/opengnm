@@ -58,14 +58,15 @@ static inline void sceGnmBufSetBaseAddress(GnmBuffer* buf, void* baseaddr) {
 }
 
 static inline GnmDataFormat sceGnmBufGetFormat(const GnmBuffer* buf) {
-	return (GnmDataFormat){
-	    .surfacefmt = (GnmImageFormat)buf->dataformat,
-	    .chantype = (GnmImgNumFormat)buf->numformat,
-	    .chanx = buf->dstselx,
-	    .chany = buf->dstsely,
-	    .chanz = buf->dstselz,
-	    .chanw = buf->dstselw,
-	};
+	GnmDataFormat fmt;
+	fmt.asuint = 0;
+	fmt.surfacefmt = (GnmImageFormat)buf->dataformat;
+	fmt.chantype = (GnmImgNumFormat)buf->numformat;
+	fmt.chanx = buf->dstselx;
+	fmt.chany = buf->dstsely;
+	fmt.chanz = buf->dstselz;
+	fmt.chanw = buf->dstselw;
+	return fmt;
 }
 
 static inline void sceGnmBufSetFormat(GnmBuffer* buf, GnmDataFormat fmt) {
