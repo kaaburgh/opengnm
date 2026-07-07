@@ -33,11 +33,220 @@
 
 #include "gnmdriver.h"
 #include "gnm_error.h"
+#include "gnm_shader.h"
 #include "platform.h"
+#include "pm4/sid.h"
+
+#include "u/utility.h"
 
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+/*
+ * Firmware shader-set helpers are not safe in every caller context. Eden's PS4
+ * renderer reaches sceGnmDriverSetVsShader from its GPU work pump and FW 9.00
+ * crashes inside sceGnmSetVsShader before returning. Emit the same PM4 locally
+ * for driver-level shader binds and keep firmware forwarding for submission and
+ * other true runtime operations.
+ */
+static uint32_t setcontextregisterrange(
+    uint32_t* cmd, uint32_t regaddr, const uint32_t* regvalues,
+    uint32_t numvalues
+) {
+	if (regaddr < SI_CONTEXT_REG_OFFSET ||
+	    numvalues > (SI_CONTEXT_REG_END - regaddr) / sizeof(uint32_t)) {
+		sceGnmWriteMsgf(
+		    GNM_MSGSEV_ERR, "Invalid context register 0x%x used",
+		    regaddr
+		);
+		return 0;
+	}
+
+	cmd[0] = PKT3(PKT3_SET_CONTEXT_REG, numvalues, 0);
+	cmd[1] = (regaddr - SI_CONTEXT_REG_OFFSET) >> 2;
+	for (uint32_t i = 0; i < numvalues; i += 1) {
+		cmd[2 + i] = regvalues[i];
+	}
+
+	return 2 + numvalues;
+}
+
+static inline uint32_t setcontextregister(
+    uint32_t* cmd, uint32_t regaddr, uint32_t regvalue
+) {
+	return setcontextregisterrange(cmd, regaddr, &regvalue, 1);
+}
+
+static uint32_t setpersistentregisterrange(
+    uint32_t* cmd, uint32_t regaddr, const uint32_t* regvalues,
+    uint32_t numvalues
+) {
+	if (regaddr < SI_SH_REG_OFFSET ||
+	    numvalues > (SI_SH_REG_END - regaddr) / sizeof(uint32_t)) {
+		sceGnmWriteMsgf(
+		    GNM_MSGSEV_ERR, "Invalid persistent register 0x%x used",
+		    regaddr
+		);
+		return 0;
+	}
+
+	cmd[0] = PKT3(PKT3_SET_SH_REG, numvalues, 0);
+	cmd[1] = (regaddr - SI_SH_REG_OFFSET) >> 2;
+	for (uint32_t i = 0; i < numvalues; i += 1) {
+		cmd[2 + i] = regvalues[i];
+	}
+
+	return 2 + numvalues;
+}
+
+static inline uint32_t* setpshresources(
+    uint32_t* cmd, const GnmPsStageRegisters* psregs
+) {
+	const uint32_t pgmps[2] = {psregs->spishaderpgmlops, 0};
+	cmd += setpersistentregisterrange(
+	    cmd, R_00B020_SPI_SHADER_PGM_LO_PS, pgmps, uasize(pgmps)
+	);
+
+	const uint32_t pgmrsrc[2] = {
+	    psregs->spishaderpgmrsrc1ps, psregs->spishaderpgmrsrc2ps};
+	cmd += setpersistentregisterrange(
+	    cmd, R_00B028_SPI_SHADER_PGM_RSRC1_PS, pgmrsrc, uasize(pgmrsrc)
+	);
+
+	const uint32_t shfmt[2] = {
+	    psregs->spishaderzformat, psregs->spishadercolformat};
+	cmd += setcontextregisterrange(
+	    cmd, R_028710_SPI_SHADER_Z_FORMAT, shfmt, uasize(shfmt)
+	);
+
+	const uint32_t shinput[2] = {
+	    psregs->spipsinputena, psregs->spipsinputaddr};
+	cmd += setcontextregisterrange(
+	    cmd, R_0286CC_SPI_PS_INPUT_ENA, shinput, uasize(shinput)
+	);
+
+	cmd += setcontextregister(
+	    cmd, R_0286D8_SPI_PS_IN_CONTROL, psregs->spipsincontrol
+	);
+	cmd += setcontextregister(
+	    cmd, R_0286E0_SPI_BARYC_CNTL, psregs->spibaryccntl
+	);
+	cmd += setcontextregister(
+	    cmd, R_02880C_DB_SHADER_CONTROL, psregs->dbshadercontrol
+	);
+	cmd += setcontextregister(
+	    cmd, R_02823C_CB_SHADER_MASK, psregs->cbshadermask
+	);
+
+	return cmd;
+}
+
+static int32_t setpsshaderlocal(
+    uint32_t* cmd, uint32_t numdwords, const void* psregs,
+    uint32_t maxdwords, bool setdefaultmask
+) {
+	const GnmPsStageRegisters* ppsregs = psregs;
+	if (!cmd || numdwords < maxdwords) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	uint32_t* startcmd = cmd;
+
+	if (psregs) {
+		if (ppsregs->spishaderpgmhips) {
+			return GNM_ERROR_CMD_FAILED;
+		}
+		cmd = setpshresources(cmd, ppsregs);
+	} else {
+		const uint32_t pgmps[2] = {0};
+		cmd += setpersistentregisterrange(
+		    cmd, R_00B020_SPI_SHADER_PGM_LO_PS, pgmps, uasize(pgmps)
+		);
+		cmd += setcontextregister(cmd, R_02880C_DB_SHADER_CONTROL, 0);
+		if (setdefaultmask) {
+			cmd += setcontextregister(cmd, R_02823C_CB_SHADER_MASK, 0xf);
+		}
+	}
+
+	const uint32_t remainingdwords = maxdwords - (cmd - startcmd);
+	if (remainingdwords) {
+		cmd[0] = PKT3(PKT3_NOP, remainingdwords - 2, 0);
+		for (uint32_t i = 1; i < remainingdwords; i += 1) {
+			cmd[i] = 0;
+		}
+	}
+
+	return GNM_ERROR_OK;
+}
+
+static int32_t setvsshaderlocal(
+    uint32_t* cmd, uint32_t numdwords, const void* vsregs,
+    uint32_t shadermodifier
+) {
+	const uint32_t maxdwords = 29;
+	const GnmVsStageRegisters* pvsregs = vsregs;
+
+	if (!cmd || numdwords < maxdwords || !vsregs) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (shadermodifier & 0xfcfffc3f) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+	if (pvsregs->spishaderpgmhivs) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	uint32_t* startcmd = cmd;
+
+	const uint32_t pgmvs[2] = {pvsregs->spishaderpgmlovs, 0};
+	cmd += setpersistentregisterrange(
+	    cmd, R_00B120_SPI_SHADER_PGM_LO_VS, pgmvs, uasize(pgmvs)
+	);
+
+	const uint32_t rsrc1 = shadermodifier == 0
+	    ? pvsregs->spishaderpgmrsrc1vs
+	    : ((pvsregs->spishaderpgmrsrc1vs & 0xfcfffc3f) | shadermodifier);
+	const uint32_t pgmrsrc[2] = {rsrc1, pvsregs->spishaderpgmrsrc2vs};
+	cmd += setpersistentregisterrange(
+	    cmd, R_00B128_SPI_SHADER_PGM_RSRC1_VS, pgmrsrc, uasize(pgmrsrc)
+	);
+
+	cmd += setcontextregister(
+	    cmd, R_02881C_PA_CL_VS_OUT_CNTL, pvsregs->paclvsoutcntl
+	);
+	cmd += setcontextregister(
+	    cmd, R_0286C4_SPI_VS_OUT_CONFIG, pvsregs->spivsoutconfig
+	);
+	cmd += setcontextregister(
+	    cmd, R_02870C_SPI_SHADER_POS_FORMAT, pvsregs->spishaderposformat
+	);
+
+	const uint32_t remainingdwords = maxdwords - (cmd - startcmd);
+	if (remainingdwords) {
+		cmd[0] = PKT3(PKT3_NOP, remainingdwords - 2, 0);
+		for (uint32_t i = 1; i < remainingdwords; i += 1) {
+			cmd[i] = 0;
+		}
+	}
+
+	return GNM_ERROR_OK;
+}
+
+static const uint8_t s_embedded_vs_fullscreen[] = {
+    0xf1, 0x00, 0xe0, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x0c, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+_Static_assert(sizeof(s_embedded_vs_fullscreen) == 0x1c, "");
+
+static const uint8_t s_embedded_ps_dummy[] = {
+    0xf0, 0x00, 0xe0, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x00,
+    0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+    0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+_Static_assert(sizeof(s_embedded_ps_dummy) == 0x30, "");
 /*
  * Part 1: Firmware extern declarations.
  *
@@ -312,39 +521,49 @@ int32_t sceGnmDriverSetVsShader(
     uint32_t* cmd, uint32_t numdwords, const void* vsregs,
     uint32_t shadermodifier
 ) {
-	return sceGnmSetVsShader(
-	    cmd, numdwords, (const uint32_t*)vsregs, shadermodifier
-	);
+	return setvsshaderlocal(cmd, numdwords, vsregs, shadermodifier);
 }
 
 int32_t sceGnmDriverSetPsShader(
     uint32_t* cmd, uint32_t numdwords, const void* psregs
 ) {
-	return sceGnmSetPsShader(cmd, numdwords, (const uint32_t*)psregs);
+	return setpsshaderlocal(cmd, numdwords, psregs, 34, false);
 }
 
 int32_t sceGnmDriverSetPsShader350(
     uint32_t* cmd, uint32_t numdwords, const void* psregs
 ) {
-	return sceGnmSetPsShader350(cmd, numdwords, (const uint32_t*)psregs);
+	return setpsshaderlocal(cmd, numdwords, psregs, 40, true);
 }
 
 int32_t sceGnmDriverSetEmbeddedVsShader(
     uint32_t* cmd, uint32_t numdwords, int32_t shaderid, uint32_t shadermodifier
 ) {
-	return sceGnmSetEmbeddedVsShader(
-	    cmd, numdwords, (uint32_t)shaderid, shadermodifier
-	);
+	const void* shaderptr = 0;
+	switch (shaderid) {
+	case GNM_EMBEDDED_VSH_FULLSCREEN:
+		shaderptr = s_embedded_vs_fullscreen;
+		break;
+	default:
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	return setvsshaderlocal(cmd, numdwords, shaderptr, shadermodifier);
 }
 
 int32_t sceGnmDriverSetEmbeddedPsShader(
     uint32_t* cmd, uint32_t numdwords, int32_t shaderid
 ) {
-	/* sceGnmSetEmbeddedPsShader takes a shader_modifier param that the
-	 * internal wrapper does not expose. Pass 0 (no modifier). */
-	return sceGnmSetEmbeddedPsShader(
-	    cmd, numdwords, (uint32_t)shaderid, 0
-	);
+	const void* shaderptr = 0;
+	switch (shaderid) {
+	case GNM_EMBEDDED_PSH_DUMMY:
+		shaderptr = s_embedded_ps_dummy;
+		break;
+	default:
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	return setpsshaderlocal(cmd, numdwords, shaderptr, 40, true);
 }
 
 int32_t sceGnmDriverInsertWaitFlipDone(
