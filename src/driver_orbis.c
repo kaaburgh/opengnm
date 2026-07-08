@@ -43,6 +43,19 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint32_t drawflagsraw(SceGnmDrawFlags flags) {
+	uint32_t raw = 0;
+	memcpy(&raw, &flags, sizeof(raw));
+	return raw;
+}
+
+static uint32_t drawinitiator(SceGnmDrawFlags flags, uint32_t source_select) {
+	if (sceGnmGpuMode() == GNM_GPU_NEO) {
+		source_select |= drawflagsraw(flags) & 0xE0000000u;
+	}
+	return source_select;
+}
+
 /*
  * Firmware shader-set helpers are not safe in every caller context. Eden's PS4
  * renderer reaches sceGnmDriverSetVsShader from its GPU work pump and FW 9.00
@@ -459,9 +472,24 @@ int32_t sceGnmDriverDrawIndexAuto(
     uint32_t* cmd, uint32_t numdwords, uint32_t indexcount,
     SceGnmDrawFlags flags
 ) {
-	return sceGnmDrawIndexAuto(
-	    cmd, numdwords, indexcount, *(uint32_t*)&flags
+	const uint32_t rawflags = drawflagsraw(flags);
+	if (!cmd || numdwords != 7 || (rawflags & 0x1FFFFFFE) != 0) {
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	cmd[0] = PKT3(PKT3_DRAW_INDEX_AUTO, 1, flags.predication);
+	cmd[1] = indexcount;
+	cmd[2] = drawinitiator(
+	    flags, S_0287F0_SOURCE_SELECT(V_0287F0_DI_SRC_SEL_AUTO_INDEX)
 	);
+	cmd += 3;
+
+	cmd[0] = PKT3(PKT3_NOP, 2, 0);
+	cmd[1] = 0;
+	cmd[2] = 0;
+	cmd[3] = 0;
+
+	return GNM_ERROR_OK;
 }
 
 int32_t sceGnmDriverDrawIndexIndirect(
