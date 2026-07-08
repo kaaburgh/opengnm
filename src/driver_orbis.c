@@ -41,7 +41,19 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+
+#ifndef __has_include
+#define __has_include(_file) 0
+#endif
+
+#if __has_include(<orbis/libkernel.h>)
+#include <orbis/libkernel.h>
+#define OPENGNM_ORBIS_HAS_LIBKERNEL 1
+#else
+#define OPENGNM_ORBIS_HAS_LIBKERNEL 0
+#endif
 
 static uint32_t drawflagsraw(SceGnmDrawFlags flags) {
 	uint32_t raw = 0;
@@ -55,6 +67,115 @@ static uint32_t drawinitiator(SceGnmDrawFlags flags, uint32_t source_select) {
 	}
 	return source_select;
 }
+
+static int g_submit_log_budget = 64;
+
+static void submitlog(const char* message) {
+	if (g_submit_log_budget <= 0) {
+		return;
+	}
+	g_submit_log_budget -= 1;
+
+	FILE* file = fopen("/data/eden_ps4_runtime.log", "a");
+	if (!file) {
+		return;
+	}
+	fputs("opengnm_submit: ", file);
+	fputs(message, file);
+	fputc('\n', file);
+	fclose(file);
+}
+
+static void submitlogu(const char* label, uint64_t value) {
+	if (g_submit_log_budget <= 0) {
+		return;
+	}
+	char message[160];
+	snprintf(message, sizeof(message), "%s=%llu", label,
+	         (unsigned long long)value);
+	submitlog(message);
+}
+
+static void submitlogi(const char* label, int32_t value) {
+	if (g_submit_log_budget <= 0) {
+		return;
+	}
+	char message[160];
+	snprintf(message, sizeof(message), "%s=%d", label, value);
+	submitlog(message);
+}
+
+#if OPENGNM_ORBIS_HAS_LIBKERNEL
+static void* resolvegnmdriversym(const char* name) {
+	OrbisKernelModule modules[128];
+	size_t available = 0;
+	int result = sceKernelGetModuleList(
+	    modules, sizeof(modules), &available
+	);
+	if (result != 0) {
+		submitlogi("module list failed", result);
+		return NULL;
+	}
+
+	size_t count = available;
+	if (count > uasize(modules)) {
+		count = uasize(modules);
+	}
+
+	for (size_t i = 0; i < count; i += 1) {
+		OrbisKernelModuleInfo info;
+		memset(&info, 0, sizeof(info));
+		info.size = sizeof(info);
+		if (sceKernelGetModuleInfo(modules[i], &info) != 0) {
+			continue;
+		}
+		if (!strstr(info.name, "GnmDriver")) {
+			continue;
+		}
+
+		void* symbol = NULL;
+		result = sceKernelDlsym((int)modules[i], name, &symbol);
+		if (result == 0 && symbol) {
+			return symbol;
+		}
+		submitlogi("dlsym failed", result);
+		return NULL;
+	}
+
+	submitlog("GnmDriver module missing");
+	return NULL;
+}
+#else
+static void* resolvegnmdriversym(const char* name) {
+	(void)name;
+	submitlog("libkernel unavailable");
+	return NULL;
+}
+#endif
+
+typedef int32_t (*SubmitCommandBuffersFn)(
+    uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
+    uint32_t* ccb_sizes_in_bytes
+);
+typedef int32_t (*SubmitAndFlipCommandBuffersFn)(
+    uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
+    uint32_t* ccb_sizes_in_bytes, uint32_t vo_handle, uint32_t buf_idx,
+    uint32_t flip_mode, int64_t flip_arg
+);
+typedef int32_t (*SubmitCommandBuffersForWorkloadFn)(
+    uint32_t workload, uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
+    uint32_t* ccb_sizes_in_bytes
+);
+typedef int32_t (*SubmitAndFlipCommandBuffersForWorkloadFn)(
+    uint32_t workload, uint32_t count, void* const dcb_gpu_addrs[],
+    uint32_t* dcb_sizes_in_bytes, void* const ccb_gpu_addrs[],
+    uint32_t* ccb_sizes_in_bytes, uint32_t vo_handle, uint32_t buf_idx,
+    uint32_t flip_mode, int64_t flip_arg
+);
+typedef int32_t (*SubmitDoneFn)(void);
 
 /*
  * Firmware shader-set helpers are not safe in every caller context. Eden's PS4
@@ -369,24 +490,197 @@ extern int32_t sceGnmDispatchIndirectOnMec(
     uint32_t* cmdbuf, uint32_t size, uintptr_t args, uint32_t modifier);
 
 /* Submit functions */
-extern int32_t sceGnmSubmitCommandBuffers(
+extern int sceGnmAreSubmitsAllowed(void);
+
+static int32_t validatesubmitargs(
+    uint32_t count, void* const dcbgpuaddrs[], uint32_t* dcbsizes
+) {
+	if (count == 0 || count > 64 || !dcbgpuaddrs || !dcbsizes) {
+		submitlog("invalid submit arrays");
+		return GNM_ERROR_CMD_FAILED;
+	}
+
+	for (uint32_t i = 0; i < count; i += 1) {
+		const uintptr_t addr = (uintptr_t)dcbgpuaddrs[i];
+		const uint32_t size = dcbsizes[i];
+		if (!addr || size == 0 || (size & 3) != 0 ||
+		    size > GNM_INDIRECT_BUFFER_MAX_BYTESIZE) {
+			submitlogu("invalid submit index", i);
+			submitlogu("invalid submit addr", addr);
+			submitlogu("invalid submit size", size);
+			return GNM_ERROR_CMD_FAILED;
+		}
+	}
+
+	return GNM_ERROR_OK;
+}
+
+int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffers(
     uint32_t count, void* const dcbgpuaddrs[], uint32_t* dcbsizes,
-    void* const ccbgpuaddrs[], uint32_t* ccbsizes);
-extern int32_t sceGnmSubmitAndFlipCommandBuffers(
+    void* const ccbgpuaddrs[], uint32_t* ccbsizes
+) {
+	static SubmitCommandBuffersFn real_submit = NULL;
+	if (!real_submit) {
+		real_submit = (SubmitCommandBuffersFn)resolvegnmdriversym(
+		    "sceGnmSubmitCommandBuffers"
+		);
+	}
+	if (!real_submit) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	const int32_t validation = validatesubmitargs(
+	    count, dcbgpuaddrs, dcbsizes
+	);
+	if (validation != GNM_ERROR_OK) {
+		return validation;
+	}
+
+	submitlog("submit begin");
+	submitlogu("count", count);
+	submitlogu("dcb0", (uintptr_t)dcbgpuaddrs[0]);
+	submitlogu("dcb0_size", dcbsizes[0]);
+	const int32_t result = real_submit(
+	    count, dcbgpuaddrs, dcbsizes, ccbgpuaddrs, ccbsizes
+	);
+	submitlogi("submit result", result);
+	return result;
+}
+
+int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffers(
     uint32_t count, void* const dcbgpuaddrs[], uint32_t* dcbsizes,
     void* const ccbgpuaddrs[], uint32_t* ccbsizes, uint32_t vohandle,
-    uint32_t bufidx, uint32_t flipmode, int64_t fliparg);
-extern int32_t sceGnmSubmitCommandBuffersForWorkload(
+    uint32_t bufidx, uint32_t flipmode, int64_t fliparg
+) {
+	static SubmitAndFlipCommandBuffersFn real_submit = NULL;
+	if (!real_submit) {
+		real_submit = (SubmitAndFlipCommandBuffersFn)resolvegnmdriversym(
+		    "sceGnmSubmitAndFlipCommandBuffers"
+		);
+	}
+	if (!real_submit) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	const int32_t validation = validatesubmitargs(
+	    count, dcbgpuaddrs, dcbsizes
+	);
+	if (validation != GNM_ERROR_OK) {
+		return validation;
+	}
+
+	submitlog("submit_and_flip begin");
+	const int32_t result = real_submit(
+	    count, dcbgpuaddrs, dcbsizes, ccbgpuaddrs, ccbsizes, vohandle,
+	    bufidx, flipmode, fliparg
+	);
+	submitlogi("submit_and_flip result", result);
+	return result;
+}
+
+int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload(
     uint32_t workload, uint32_t count, void* const dcbgpuaddrs[],
-    uint32_t* dcbsizes, void* const ccbgpuaddrs[], uint32_t* ccbsizes);
-extern int32_t sceGnmSubmitAndFlipCommandBuffersForWorkload(
+    uint32_t* dcbsizes, void* const ccbgpuaddrs[], uint32_t* ccbsizes
+) {
+	static SubmitCommandBuffersForWorkloadFn real_submit = NULL;
+	if (!real_submit) {
+		real_submit = (SubmitCommandBuffersForWorkloadFn)resolvegnmdriversym(
+		    "sceGnmSubmitCommandBuffersForWorkload"
+		);
+	}
+	if (!real_submit) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	const int32_t validation = validatesubmitargs(
+	    count, dcbgpuaddrs, dcbsizes
+	);
+	if (validation != GNM_ERROR_OK) {
+		return validation;
+	}
+
+	submitlog("submit_workload begin");
+	const int32_t result = real_submit(
+	    workload, count, dcbgpuaddrs, dcbsizes, ccbgpuaddrs, ccbsizes
+	);
+	submitlogi("submit_workload result", result);
+	return result;
+}
+
+int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffersForWorkload(
     uint32_t workload, uint32_t count, void* const dcbgpuaddrs[],
     uint32_t* dcbsizes, void* const ccbgpuaddrs[], uint32_t* ccbsizes,
-    uint32_t vohandle, uint32_t bufidx, uint32_t flipmode, int64_t fliparg);
-extern int sceGnmSubmitDone(void);
-extern int sceGnmAreSubmitsAllowed(void);
-extern int sceGnmRequestFlipAndSubmitDone(void);
-extern int sceGnmRequestFlipAndSubmitDoneForWorkload(void);
+    uint32_t vohandle, uint32_t bufidx, uint32_t flipmode, int64_t fliparg
+) {
+	static SubmitAndFlipCommandBuffersForWorkloadFn real_submit = NULL;
+	if (!real_submit) {
+		real_submit = (SubmitAndFlipCommandBuffersForWorkloadFn)
+		    resolvegnmdriversym(
+		        "sceGnmSubmitAndFlipCommandBuffersForWorkload"
+		    );
+	}
+	if (!real_submit) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	const int32_t validation = validatesubmitargs(
+	    count, dcbgpuaddrs, dcbsizes
+	);
+	if (validation != GNM_ERROR_OK) {
+		return validation;
+	}
+
+	submitlog("submit_flip_workload begin");
+	const int32_t result = real_submit(
+	    workload, count, dcbgpuaddrs, dcbsizes, ccbgpuaddrs, ccbsizes,
+	    vohandle, bufidx, flipmode, fliparg
+	);
+	submitlogi("submit_flip_workload result", result);
+	return result;
+}
+
+int32_t PS4_SYSV_ABI sceGnmSubmitDone(void) {
+	static SubmitDoneFn real_submit_done = NULL;
+	if (!real_submit_done) {
+		real_submit_done = (SubmitDoneFn)resolvegnmdriversym(
+		    "sceGnmSubmitDone"
+		);
+	}
+	if (!real_submit_done) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+
+	submitlog("submit_done begin");
+	const int32_t result = real_submit_done();
+	submitlogi("submit_done result", result);
+	return result;
+}
+
+int32_t PS4_SYSV_ABI sceGnmRequestFlipAndSubmitDone(void) {
+	static SubmitDoneFn real_request = NULL;
+	if (!real_request) {
+		real_request = (SubmitDoneFn)resolvegnmdriversym(
+		    "sceGnmRequestFlipAndSubmitDone"
+		);
+	}
+	if (!real_request) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+	return real_request();
+}
+
+int32_t PS4_SYSV_ABI sceGnmRequestFlipAndSubmitDoneForWorkload(void) {
+	static SubmitDoneFn real_request = NULL;
+	if (!real_request) {
+		real_request = (SubmitDoneFn)resolvegnmdriversym(
+		    "sceGnmRequestFlipAndSubmitDoneForWorkload"
+		);
+	}
+	if (!real_request) {
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
+	return real_request();
+}
 
 /* Compute queue management */
 extern int32_t sceGnmMapComputeQueue(
