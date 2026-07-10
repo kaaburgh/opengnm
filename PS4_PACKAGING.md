@@ -425,19 +425,6 @@ After staging:
 opengnm hardware smoke passed: dcb_size=<bytes>
 ```
 
-If output is not visible, use PS4debug process capture after launch:
-
-```sh
-/Users/bizkut/Downloads/PS5/homebrew/PyPS4debug/.venv/bin/python \
-  /Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm/tools/ps4debug_probe.py \
-  --host 10.0.1.157 \
-  --wait \
-  --title-id OGNM00001 \
-  --maps \
-  --map-limit 16 \
-  --output /tmp/ps4_opengnm_hw_smoke.json
-```
-
 ## Expected Result
 
 Success:
