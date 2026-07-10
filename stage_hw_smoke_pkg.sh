@@ -40,8 +40,5 @@ cat <<EOF
 
 Staged $pkg_name to ftp://$PS4_HOST:$PS4_FTP_PORT$REMOTE_DIR/
 
-Install and launch title ID OGNM00001 on the PS4, then capture it with:
-$PS4DEBUG_PYTHON $ROOT_DIR/tools/ps4debug_probe.py \\
-  --host $PS4_HOST --wait --title-id OGNM00001 \\
-  --maps --map-limit 16 --output /tmp/ps4_opengnm_hw_smoke.json
+Install and launch title ID OGNM00001 on the PS4.
 EOF
