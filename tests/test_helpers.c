@@ -153,6 +153,32 @@ static TestResult test_helpers_command_buffer_validation(void) {
 	return test_success();
 }
 
+static TestResult test_helpers_wrapped_shader_metadata(void) {
+	enum {
+		kWrapperSize = 0x24,
+		kHeaderSize = sizeof(GnmShaderFileHeader),
+		kStageSize = sizeof(GnmPsShader),
+		kCodeSize = 16,
+		kBlobSize = kWrapperSize + kHeaderSize + kStageSize + kCodeSize,
+	};
+	uint8_t blob[kBlobSize];
+	memset(blob, 0, sizeof(blob));
+	GnmShaderFileHeader* header = (GnmShaderFileHeader*)(blob + kWrapperSize);
+	header->magic = GNM_SHADER_FILE_HEADER_ID;
+	header->type = GNM_SHADER_PIXEL;
+	header->headersizedwords = sizeof(GnmShaderFileHeader) / 4;
+	header->targetgpumodes = GNM_TARGETGPUMODE_BASE;
+	GnmPsShader* ps = (GnmPsShader*)(blob + kWrapperSize + kHeaderSize);
+	ps->common.shadersize = kCodeSize;
+	ps->registers.spishaderpgmlops = kStageSize;
+	GnmShaderMetadata metadata;
+	GnmError err = sceGnmShaderBinaryGetMetadata(blob, sizeof(blob), &metadata);
+	utasserteq((long long)err, (long long)GNM_ERROR_OK);
+	utasserteq((long long)metadata.type, (long long)GNM_SHADER_PIXEL);
+	utassert(metadata.shadercode == blob + kWrapperSize + kHeaderSize + kStageSize);
+	return test_success();
+}
+
 int run_tests_helpers(void) {
 	const TestUnit tests[] = {
 	    {test_helpers_direct_memory, "DirectMemory helper"},
@@ -161,6 +187,7 @@ int run_tests_helpers(void) {
 	     "VideoOut invalid create-info diagnostics"},
 	    {test_helpers_resource_setup, "Resource setup helpers"},
 	    {test_helpers_shader_metadata, "Shader metadata helper"},
+	    {test_helpers_wrapped_shader_metadata, "Wrapped shader metadata helper"},
 	    {test_helpers_command_buffer_validation, "Command buffer validation"},
 	};
 	return test_suite(

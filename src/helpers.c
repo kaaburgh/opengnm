@@ -532,17 +532,29 @@ GnmError PS4_SYSV_ABI sceGnmShaderBinaryGetMetadata(
 		return GNM_ERROR_INVALID_ARGS;
 	}
 
-	const uint8_t* base = (const uint8_t*)data;
-	const GnmShaderFileHeader* header = (const GnmShaderFileHeader*)data;
+	const uint8_t* containerbase = (const uint8_t*)data;
+	size_t shaderoffset = 0;
+	const GnmShaderFileHeader* header = (const GnmShaderFileHeader*)containerbase;
+	if (header->magic != GNM_SHADER_FILE_HEADER_ID &&
+	    size >= 0x24 + sizeof(GnmShaderFileHeader)) {
+		const GnmShaderFileHeader* wrapped =
+		    (const GnmShaderFileHeader*)(containerbase + 0x24);
+		if (wrapped->magic == GNM_SHADER_FILE_HEADER_ID) {
+			shaderoffset = 0x24;
+			header = wrapped;
+		}
+	}
 	if (header->magic != GNM_SHADER_FILE_HEADER_ID) {
 		return GNM_ERROR_INVALID_ARGS;
 	}
+	const uint8_t* base = containerbase + shaderoffset;
+	const size_t shadersize = size - shaderoffset;
 
 	const size_t headerbytes =
 	    header->headersizedwords ? header->headersizedwords * 4u
 				     : sizeof(GnmShaderFileHeader);
 	if (headerbytes < sizeof(GnmShaderFileHeader) ||
-	    headerbytes + sizeof(GnmShaderCommonData) > size) {
+	    headerbytes + sizeof(GnmShaderCommonData) > shadersize) {
 		return GNM_ERROR_INVALID_ARGS;
 	}
 
@@ -561,12 +573,12 @@ GnmError PS4_SYSV_ABI sceGnmShaderBinaryGetMetadata(
 
 	switch (outmetadata->type) {
 	case GNM_SHADER_VERTEX: {
-		if (headerbytes + sizeof(GnmVsShader) > size) {
+		if (headerbytes + sizeof(GnmVsShader) > shadersize) {
 			return GNM_ERROR_INVALID_ARGS;
 		}
 		const GnmVsShader* vs = (const GnmVsShader*)outmetadata->stage;
 		const uint32_t stagesize = sceGnmVsShaderCalcSize(vs);
-		if (headerbytes + stagesize > size) {
+		if (headerbytes + stagesize > shadersize) {
 			return GNM_ERROR_INVALID_ARGS;
 		}
 		outmetadata->stagesize = stagesize;
@@ -577,12 +589,12 @@ GnmError PS4_SYSV_ABI sceGnmShaderBinaryGetMetadata(
 		break;
 	}
 	case GNM_SHADER_PIXEL: {
-		if (headerbytes + sizeof(GnmPsShader) > size) {
+		if (headerbytes + sizeof(GnmPsShader) > shadersize) {
 			return GNM_ERROR_INVALID_ARGS;
 		}
 		const GnmPsShader* ps = (const GnmPsShader*)outmetadata->stage;
 		const uint32_t stagesize = sceGnmPsShaderCalcSize(ps);
-		if (headerbytes + stagesize > size) {
+		if (headerbytes + stagesize > shadersize) {
 			return GNM_ERROR_INVALID_ARGS;
 		}
 		outmetadata->stagesize = stagesize;
@@ -598,7 +610,7 @@ GnmError PS4_SYSV_ABI sceGnmShaderBinaryGetMetadata(
 
 	if (outmetadata->shadercode &&
 	    !range_inside(
-		base, size, outmetadata->shadercode,
+		base, shadersize, outmetadata->shadercode,
 		outmetadata->shadercodesize
 	    )) {
 		return GNM_ERROR_INVALID_STATE;
