@@ -231,17 +231,20 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	memset(videoout, 0, sizeof(*videoout));
 	videoout->handle = -1;
 	videoout->last_error_stage = 1;
+	videoout->last_error_code = GNM_ERROR_OK;
 
 	uint64_t buffersize = 0;
 	uint64_t bufferstride = 0;
 	GnmError err =
 	    sceGnmVideoOutCalcBufferLayout(info, &buffersize, &bufferstride);
 	if (err != GNM_ERROR_OK) {
+		videoout->last_error_code = (int32_t)err;
 		return err;
 	}
 	uint64_t totalbuffersize = 0;
 	if (!mul_u64(bufferstride, info->numbuffers, &totalbuffersize)) {
 		videoout->last_error_stage = 1;
+		videoout->last_error_code = GNM_ERROR_OVERFLOW;
 		return GNM_ERROR_OVERFLOW;
 	}
 
@@ -249,6 +252,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	videoout->handle = sceVideoOutOpen(0, info->bus, 0, NULL);
 	if (videoout->handle < 0) {
 		videoout->last_error_stage = 2;
+		videoout->last_error_code = videoout->handle;
 		err = (GnmError)videoout->handle;
 		sceGnmVideoOutClose(videoout);
 		return err;
@@ -260,6 +264,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	);
 	if (err != GNM_ERROR_OK) {
 		videoout->last_error_stage = 3;
+		videoout->last_error_code = (int32_t)err;
 		sceGnmVideoOutClose(videoout);
 		return err;
 	}
@@ -289,6 +294,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	);
 	if (result < 0) {
 		videoout->last_error_stage = 4;
+		videoout->last_error_code = result;
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}
@@ -298,6 +304,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	result = sceKernelCreateEqueue(&queue, "opengnm videoout flips");
 	if (result != 0) {
 		videoout->last_error_stage = 5;
+		videoout->last_error_code = result;
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}
@@ -306,6 +313,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	result = sceVideoOutAddFlipEvent(queue, videoout->handle, NULL);
 	if (result != 0) {
 		videoout->last_error_stage = 6;
+		videoout->last_error_code = result;
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}

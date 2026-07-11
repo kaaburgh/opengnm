@@ -80,6 +80,7 @@ typedef struct {
 	uint64_t frame;
 	/* Diagnostic stage for a failed VideoOut open (1..6, zero on success). */
 	uint32_t last_error_stage;
+	int32_t last_error_code;
 } GnmVideoOut;
 
 void PS4_SYSV_ABI sceGnmVideoOutInitDefaultCreateInfo(
