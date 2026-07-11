@@ -223,14 +223,18 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutCalcBufferLayout(
 GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
     GnmVideoOut* videoout, const GnmVideoOutCreateInfo* info
 ) {
-	if (!videoout || !info || info->numbuffers == 0 ||
-	    info->numbuffers > GNM_VIDEO_OUT_MAX_BUFFERS) {
+	if (!videoout) {
 		return GNM_ERROR_INVALID_ARGS;
 	}
 
 	memset(videoout, 0, sizeof(*videoout));
 	videoout->handle = -1;
 	videoout->last_error_stage = 1;
+	videoout->last_error_code = GNM_ERROR_INVALID_ARGS;
+	if (!info || info->numbuffers == 0 ||
+	    info->numbuffers > GNM_VIDEO_OUT_MAX_BUFFERS) {
+		return GNM_ERROR_INVALID_ARGS;
+	}
 	videoout->last_error_code = GNM_ERROR_OK;
 
 	uint64_t buffersize = 0;
