@@ -47,6 +47,30 @@ static TestResult test_helpers_videoout_layout(void) {
 	return test_success();
 }
 
+static TestResult test_helpers_videoout_invalid_create_info(void) {
+	GnmVideoOut videoout;
+	GnmVideoOutCreateInfo info;
+	sceGnmVideoOutInitDefaultCreateInfo(&info, 1280, 720);
+	info.numbuffers = 0;
+
+	memset(&videoout, 0xa5, sizeof(videoout));
+	GnmError err = sceGnmVideoOutOpen(&videoout, &info);
+	utasserteq((long long)err, (long long)GNM_ERROR_INVALID_ARGS);
+	utasserteq((long long)videoout.handle, -1LL);
+	utasserteq((long long)videoout.last_error_stage, 1LL);
+	utasserteq((long long)videoout.last_error_code,
+	    (long long)GNM_ERROR_INVALID_ARGS);
+
+	memset(&videoout, 0xa5, sizeof(videoout));
+	err = sceGnmVideoOutOpen(&videoout, NULL);
+	utasserteq((long long)err, (long long)GNM_ERROR_INVALID_ARGS);
+	utasserteq((long long)videoout.handle, -1LL);
+	utasserteq((long long)videoout.last_error_stage, 1LL);
+	utasserteq((long long)videoout.last_error_code,
+	    (long long)GNM_ERROR_INVALID_ARGS);
+	return test_success();
+}
+
 static TestResult test_helpers_resource_setup(void) {
 	GnmTexture tex;
 	uint64_t texsize = 0;
@@ -133,6 +157,8 @@ int run_tests_helpers(void) {
 	const TestUnit tests[] = {
 	    {test_helpers_direct_memory, "DirectMemory helper"},
 	    {test_helpers_videoout_layout, "VideoOut layout helper"},
+	    {test_helpers_videoout_invalid_create_info,
+	     "VideoOut invalid create-info diagnostics"},
 	    {test_helpers_resource_setup, "Resource setup helpers"},
 	    {test_helpers_shader_metadata, "Shader metadata helper"},
 	    {test_helpers_command_buffer_validation, "Command buffer validation"},
