@@ -1747,6 +1747,36 @@ void sceGnmDrawCmdEventWriteEop(
 	cmd->cmdptr += 6;
 }
 
+bool sceGnmDrawCmdFillMemory(
+    GnmCommandBuffer* cmd, uint64_t gpuaddr, uint32_t sizebytes,
+    uint32_t value
+) {
+	const uint32_t maxchunksize = 0x1ffffc;
+	if (!cmd || !gpuaddr || !sizebytes || (gpuaddr & 3) || (sizebytes & 3)) {
+		return false;
+	}
+	const uint32_t packetcount = (sizebytes + maxchunksize - 1) / maxchunksize;
+	if (!cmdcanfit(cmd, packetcount * 7)) {
+		return false;
+	}
+
+	while (sizebytes) {
+		const uint32_t chunksize = sizebytes > maxchunksize ? maxchunksize : sizebytes;
+		cmd->cmdptr[0] = PKT3(PKT3_DMA_DATA, 5, 0);
+		cmd->cmdptr[1] = S_500_SRC_SEL(V_500_DATA) |
+		                 S_500_DST_SEL(V_500_DST_ADDR) | S_500_CP_SYNC(1);
+		cmd->cmdptr[2] = value;
+		cmd->cmdptr[3] = 0;
+		cmd->cmdptr[4] = (uint32_t)gpuaddr;
+		cmd->cmdptr[5] = (uint32_t)(gpuaddr >> 32);
+		cmd->cmdptr[6] = S_415_BYTE_COUNT_GFX6(chunksize);
+		cmd->cmdptr += 7;
+		gpuaddr += chunksize;
+		sizebytes -= chunksize;
+	}
+	return true;
+}
+
 void sceGnmDrawCmdWaitGraphicsWrite(
     GnmCommandBuffer* cmd, GnmAcquireTargetFlags targets
 ) {

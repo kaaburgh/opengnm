@@ -204,6 +204,10 @@ void sceGnmDrawCmdEventWriteEop(
     GnmCommandBuffer* cmd, GnmEventType evtype, uint64_t gpuaddr,
     GnmEventDataSel datasel, uint64_t immvalue
 );
+bool sceGnmDrawCmdFillMemory(
+    GnmCommandBuffer* cmd, uint64_t gpuaddr, uint32_t sizebytes,
+    uint32_t value
+);
 void sceGnmDrawCmdWaitGraphicsWrite(
     GnmCommandBuffer* cmd, GnmAcquireTargetFlags targets
 );
