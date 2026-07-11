@@ -208,6 +208,10 @@ bool sceGnmDrawCmdFillMemory(
     GnmCommandBuffer* cmd, uint64_t gpuaddr, uint32_t sizebytes,
     uint32_t value
 );
+bool sceGnmDrawCmdCopyMemory(
+    GnmCommandBuffer* cmd, uint64_t dstaddr, uint64_t srcaddr,
+    uint32_t sizebytes
+);
 void sceGnmDrawCmdWaitGraphicsWrite(
     GnmCommandBuffer* cmd, GnmAcquireTargetFlags targets
 );

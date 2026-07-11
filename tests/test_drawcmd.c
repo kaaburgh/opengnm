@@ -777,6 +777,35 @@ static TestResult test_fill_memory_splits_large_ranges(void) {
 	return test_success();
 }
 
+static TestResult test_copy_memory_layout(void) {
+	uint32_t words[8] = {0};
+	GnmCommandBuffer cmd = sceGnmCmdInit(words, sizeof(words), NULL, NULL);
+	utassert(sceGnmDrawCmdCopyMemory(
+	    &cmd, 0x234567890ULL, 0x123456780ULL, 0x100
+	));
+	utasserteq(cmd.cmdptr - cmd.beginptr, 7);
+	utasserteq(words[0], PKT3(PKT3_DMA_DATA, 5, 0));
+	utasserteq(G_500_SRC_SEL(words[1]), V_500_SRC_ADDR);
+	utasserteq(words[2], 0x23456780);
+	utasserteq(words[3], 1);
+	utasserteq(words[4], 0x34567890);
+	utasserteq(words[5], 2);
+	utasserteq(G_415_BYTE_COUNT_GFX6(words[6]), 0x100);
+	return test_success();
+}
+
+static TestResult test_copy_memory_rejects_invalid_args(void) {
+	uint32_t words[8] = {0};
+	GnmCommandBuffer cmd = sceGnmCmdInit(words, sizeof(words), NULL, NULL);
+	utassert(!sceGnmDrawCmdCopyMemory(&cmd, 0, 0x2000, 4));
+	utassert(!sceGnmDrawCmdCopyMemory(&cmd, 0x1000, 0, 4));
+	utassert(!sceGnmDrawCmdCopyMemory(&cmd, 0x1001, 0x2000, 4));
+	utassert(!sceGnmDrawCmdCopyMemory(&cmd, 0x1000, 0x2001, 4));
+	utassert(!sceGnmDrawCmdCopyMemory(&cmd, 0x1000, 0x2000, 3));
+	utasserteq(cmd.cmdptr - cmd.beginptr, 0);
+	return test_success();
+}
+
 int run_tests_drawcmd(void) {
 	const TestUnit tests[] = {
 	    {test_drawindexauto, "DrawIndexAuto PM4"},
@@ -816,7 +845,9 @@ int run_tests_drawcmd(void) {
 	    {test_depth_target_stencil_layout, "Depth target stencil layout"},
 	    {test_fill_memory_layout, "FillMemory DMA_DATA layout"},
 	    {test_fill_memory_rejects_invalid_args, "FillMemory invalid args"},
-	    {test_fill_memory_splits_large_ranges, "FillMemory multi-packet range"},
+		    {test_fill_memory_splits_large_ranges, "FillMemory multi-packet range"},
+		    {test_copy_memory_layout, "CopyMemory DMA_DATA layout"},
+		    {test_copy_memory_rejects_invalid_args, "CopyMemory invalid args"},
 	};
 	return test_suite(
 	    "drawcmd/PM4", tests, sizeof(tests) / sizeof(tests[0])
