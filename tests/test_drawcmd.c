@@ -766,6 +766,17 @@ static TestResult test_fill_memory_rejects_invalid_args(void) {
 	return test_success();
 }
 
+static TestResult test_fill_memory_splits_large_ranges(void) {
+	uint32_t words[16] = {0};
+	GnmCommandBuffer cmd = sceGnmCmdInit(words, sizeof(words), NULL, NULL);
+	utassert(sceGnmDrawCmdFillMemory(&cmd, 0x10000000, 0x200000, 0x10203040));
+	utasserteq(cmd.cmdptr - cmd.beginptr, 14);
+	utasserteq(G_415_BYTE_COUNT_GFX6(words[6]), 0x1ffffc);
+	utasserteq(words[11], 0x101ffffc);
+	utasserteq(G_415_BYTE_COUNT_GFX6(words[13]), 4);
+	return test_success();
+}
+
 int run_tests_drawcmd(void) {
 	const TestUnit tests[] = {
 	    {test_drawindexauto, "DrawIndexAuto PM4"},
@@ -805,6 +816,7 @@ int run_tests_drawcmd(void) {
 	    {test_depth_target_stencil_layout, "Depth target stencil layout"},
 	    {test_fill_memory_layout, "FillMemory DMA_DATA layout"},
 	    {test_fill_memory_rejects_invalid_args, "FillMemory invalid args"},
+	    {test_fill_memory_splits_large_ranges, "FillMemory multi-packet range"},
 	};
 	return test_suite(
 	    "drawcmd/PM4", tests, sizeof(tests) / sizeof(tests[0])
