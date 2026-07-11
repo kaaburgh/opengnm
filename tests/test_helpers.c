@@ -114,7 +114,7 @@ static TestResult test_helpers_shader_metadata(void) {
 	header->vermajor = 1;
 	header->verminor = 0;
 	header->type = GNM_SHADER_VERTEX;
-	header->headersizedwords = sizeof(GnmShaderFileHeader) / 4;
+	header->headersizedwords = kStageSize / 4;
 	header->targetgpumodes = GNM_TARGETGPUMODE_BASE;
 
 	GnmVsShader* vs = (GnmVsShader*)(blob + sizeof(GnmShaderFileHeader));
@@ -159,18 +159,24 @@ static TestResult test_helpers_wrapped_shader_metadata(void) {
 		kHeaderSize = sizeof(GnmShaderFileHeader),
 		kStageSize = sizeof(GnmPsShader),
 		kCodeSize = 16,
-		kBlobSize = kWrapperSize + kHeaderSize + kStageSize + kCodeSize,
+		kInfoSize = sizeof(GnmShaderBinaryInfo),
+		kContainerCodeSize = kHeaderSize + kStageSize + kCodeSize + kInfoSize,
+		kBlobSize = kWrapperSize + kContainerCodeSize,
 	};
 	uint8_t blob[kBlobSize];
 	memset(blob, 0, sizeof(blob));
 	GnmShaderFileHeader* header = (GnmShaderFileHeader*)(blob + kWrapperSize);
 	header->magic = GNM_SHADER_FILE_HEADER_ID;
 	header->type = GNM_SHADER_PIXEL;
-	header->headersizedwords = sizeof(GnmShaderFileHeader) / 4;
+	header->headersizedwords = kStageSize / 4;
 	header->targetgpumodes = GNM_TARGETGPUMODE_BASE;
 	GnmPsShader* ps = (GnmPsShader*)(blob + kWrapperSize + kHeaderSize);
 	ps->common.shadersize = kCodeSize;
 	ps->registers.spishaderpgmlops = kStageSize;
+	memcpy(blob + 0x10, &(uint32_t){kContainerCodeSize}, sizeof(uint32_t));
+	GnmShaderBinaryInfo* info =
+	    (GnmShaderBinaryInfo*)(blob + kBlobSize - kInfoSize);
+	info->length = kCodeSize;
 	GnmShaderMetadata metadata;
 	GnmError err = sceGnmShaderBinaryGetMetadata(blob, sizeof(blob), &metadata);
 	utasserteq((long long)err, (long long)GNM_ERROR_OK);
