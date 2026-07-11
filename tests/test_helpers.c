@@ -185,6 +185,27 @@ static TestResult test_helpers_wrapped_shader_metadata(void) {
 	return test_success();
 }
 
+static TestResult test_helpers_zero_input_fetch_shader(void) {
+	GnmVsStageRegisters registers;
+	memset(&registers, 0, sizeof(registers));
+	GnmFetchShaderCreateInfo info;
+	memset(&info, 0, sizeof(info));
+	info.regs = &registers;
+
+	uint32_t size = 0;
+	GnmError err = sceGnmFetchShaderCalcSize(&size, &info);
+	utasserteq((long long)err, (long long)GNM_ERROR_OK);
+	utasserteq((long long)size, 12LL);
+
+	uint32_t code[3] = {0};
+	GnmFetchShaderResults results;
+	memset(&results, 0, sizeof(results));
+	err = sceGnmCreateFetchShader(code, sizeof(code), &info, &results);
+	utasserteq((long long)err, (long long)GNM_ERROR_OK);
+	utasserteq((long long)code[2], 0LL);
+	return test_success();
+}
+
 int run_tests_helpers(void) {
 	const TestUnit tests[] = {
 	    {test_helpers_direct_memory, "DirectMemory helper"},
@@ -193,7 +214,8 @@ int run_tests_helpers(void) {
 	     "VideoOut invalid create-info diagnostics"},
 	    {test_helpers_resource_setup, "Resource setup helpers"},
 	    {test_helpers_shader_metadata, "Shader metadata helper"},
-	    {test_helpers_wrapped_shader_metadata, "Wrapped shader metadata helper"},
+		    {test_helpers_wrapped_shader_metadata, "Wrapped shader metadata helper"},
+		    {test_helpers_zero_input_fetch_shader, "Zero-input fetch shader"},
 	    {test_helpers_command_buffer_validation, "Command buffer validation"},
 	};
 	return test_suite(

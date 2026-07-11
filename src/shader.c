@@ -193,7 +193,7 @@ GnmError sceGnmCreateFetchShader(
 
 	uint32_t cursem = 0;
 	uint32_t curvtxidx = 0;
-	do {
+	while (cursem < ci->numvtxinputs) {
 		for (uint32_t curbuf = 0;
 		     curbuf < numbufferslots && curvtxidx < ci->numvtxinputs;
 		     curbuf += 1, curvtxidx += 1) {
@@ -285,7 +285,7 @@ GnmError sceGnmCreateFetchShader(
 			}
 			cursem = curvtxidx;
 		}
-	} while (cursem < ci->numvtxinputs);
+	}
 
 	// s_waitcnt vmcnt(0) & expcnt(0) & lgkmcnt(0)
 	err = gcnAsSopp(&as, GCN_S_WAITCNT, 0);
