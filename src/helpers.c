@@ -230,6 +230,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 
 	memset(videoout, 0, sizeof(*videoout));
 	videoout->handle = -1;
+	videoout->last_error_stage = 1;
 
 	uint64_t buffersize = 0;
 	uint64_t bufferstride = 0;
@@ -240,12 +241,14 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	}
 	uint64_t totalbuffersize = 0;
 	if (!mul_u64(bufferstride, info->numbuffers, &totalbuffersize)) {
+		videoout->last_error_stage = 1;
 		return GNM_ERROR_OVERFLOW;
 	}
 
 #if OPENGNM_HELPERS_HAS_ORBIS_LIBKERNEL && OPENGNM_HELPERS_HAS_ORBIS_VIDEOOUT
 	videoout->handle = sceVideoOutOpen(0, info->bus, 0, NULL);
 	if (videoout->handle < 0) {
+		videoout->last_error_stage = 2;
 		err = (GnmError)videoout->handle;
 		sceGnmVideoOutClose(videoout);
 		return err;
@@ -256,6 +259,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	    GNM_DIRECT_MEMORY_TYPE_WC_GARLIC, GNM_PROT_CPU_GPU_RW
 	);
 	if (err != GNM_ERROR_OK) {
+		videoout->last_error_stage = 3;
 		sceGnmVideoOutClose(videoout);
 		return err;
 	}
@@ -284,6 +288,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	    &attr
 	);
 	if (result < 0) {
+		videoout->last_error_stage = 4;
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}
@@ -292,6 +297,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	OrbisKernelEqueue queue = 0;
 	result = sceKernelCreateEqueue(&queue, "opengnm videoout flips");
 	if (result != 0) {
+		videoout->last_error_stage = 5;
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}
@@ -299,11 +305,13 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 
 	result = sceVideoOutAddFlipEvent(queue, videoout->handle, NULL);
 	if (result != 0) {
+		videoout->last_error_stage = 6;
 		sceGnmVideoOutClose(videoout);
 		return (GnmError)result;
 	}
 
 	sceVideoOutSetFlipRate(videoout->handle, info->flip_rate);
+	videoout->last_error_stage = 0;
 	return GNM_ERROR_OK;
 #else
 	(void)buffersize;
