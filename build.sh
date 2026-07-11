@@ -22,6 +22,7 @@ DOCKER_OO_PS4_TOOLCHAIN="${DOCKER_OO_PS4_TOOLCHAIN:-/usr/lib/OpenOrbisSDK}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OPENGNM_DIR="$SCRIPT_DIR"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$OPENGNM_DIR"
 CREATE_FSELF_SRC="${CREATE_FSELF_SRC:-$ROOT_DIR/../OpenOrbis/create-fself}"
 CREATE_GP4_SRC="${CREATE_GP4_SRC:-$ROOT_DIR/../OpenOrbis/create-gp4}"
 TMP_DIR=""
@@ -186,7 +187,11 @@ ACTION="${1:-all}"
 
 case "$ACTION" in
     all|lib)
-        write_orbis_config
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+            write_macos_orbis_config
+        else
+            write_orbis_config
+        fi
         make lib
         echo "opengnm: PS4 library built (orbis target)"
         ;;
