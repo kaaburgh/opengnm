@@ -329,6 +329,7 @@ GnmError PS4_SYSV_ABI sceGnmVideoOutOpen(
 	(void)buffersize;
 	(void)bufferstride;
 	(void)totalbuffersize;
+	videoout->last_error_code = GNM_ERROR_UNSUPPORTED;
 	return GNM_ERROR_UNSUPPORTED;
 #endif
 }

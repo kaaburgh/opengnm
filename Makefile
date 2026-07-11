@@ -1,5 +1,9 @@
 include config.mak
 
+ifeq ($(PLATFORM), orbis)
+CFLAGS += -DOPENGNM_ORBIS
+endif
+
 # opengnm source files
 OPENGNM_SRCS = \
 	src/drawcommandbuffer.c \
