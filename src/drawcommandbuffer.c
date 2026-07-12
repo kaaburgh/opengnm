@@ -1548,7 +1548,6 @@ void sceGnmDrawCmdSetBlendControl(
 		return;
 	}
 
-	// TODO: expose DISABLE_ROP3?
 	const uint32_t ctrlflags =
 	    S_028780_COLOR_SRCBLEND(ctrl->colorsrcmult) |
 	    S_028780_COLOR_COMB_FCN(ctrl->colorfunc) |
@@ -1557,8 +1556,7 @@ void sceGnmDrawCmdSetBlendControl(
 	    S_028780_ALPHA_COMB_FCN(ctrl->alphafunc) |
 	    S_028780_ALPHA_DESTBLEND(ctrl->alphadstmult) |
 	    S_028780_SEPARATE_ALPHA_BLEND(ctrl->separatealphaenable) |
-	    S_028780_ENABLE(ctrl->blendenabled) |
-	    S_028780_DISABLE_ROP3(ctrl->blendenabled);
+	    S_028780_ENABLE(ctrl->blendenabled);
 	setcontextregister(
 	    cmd, R_028780_CB_BLEND0_CONTROL + rtindex, ctrlflags
 	);

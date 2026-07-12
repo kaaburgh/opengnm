@@ -806,6 +806,28 @@ static TestResult test_copy_memory_rejects_invalid_args(void) {
 	return test_success();
 }
 
+static TestResult test_blend_control_keeps_rop3_enabled(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+	const GnmBlendControl blend = {
+	    .colordstmult = GNM_BLEND_ONE_MINUS_CONSTANT_ALPHA,
+	    .colorsrcmult = GNM_BLEND_CONSTANT_ALPHA,
+	    .colorfunc = GNM_COMB_DST_PLUS_SRC,
+	    .alphadstmult = GNM_BLEND_ZERO,
+	    .alphasrcmult = GNM_BLEND_ONE,
+	    .alphafunc = GNM_COMB_DST_PLUS_SRC,
+	    .blendenabled = true,
+	};
+
+	sceGnmDrawCmdSetBlendControl(&cmd, 0, &blend);
+	utasserteq(cmd_dwords_used(&cmd), 3);
+	utasserteq(PKT3_OPCODE(s_cmdbuf[0]), PKT3_SET_CONTEXT_REG);
+	utasserteq(s_cmdbuf[1], (R_028780_CB_BLEND0_CONTROL - SI_CONTEXT_REG_OFFSET) >> 2);
+	utasserteq(s_cmdbuf[2], 0x40011413);
+	utasserteq(G_028780_DISABLE_ROP3(s_cmdbuf[2]), 0);
+	return test_success();
+}
+
 int run_tests_drawcmd(void) {
 	const TestUnit tests[] = {
 	    {test_drawindexauto, "DrawIndexAuto PM4"},
@@ -847,7 +869,8 @@ int run_tests_drawcmd(void) {
 	    {test_fill_memory_rejects_invalid_args, "FillMemory invalid args"},
 		    {test_fill_memory_splits_large_ranges, "FillMemory multi-packet range"},
 		    {test_copy_memory_layout, "CopyMemory DMA_DATA layout"},
-		    {test_copy_memory_rejects_invalid_args, "CopyMemory invalid args"},
+	    {test_copy_memory_rejects_invalid_args, "CopyMemory invalid args"},
+	    {test_blend_control_keeps_rop3_enabled, "BlendControl preserves ROP3"},
 	};
 	return test_suite(
 	    "drawcmd/PM4", tests, sizeof(tests) / sizeof(tests[0])
