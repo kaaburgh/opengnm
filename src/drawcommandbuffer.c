@@ -1557,7 +1557,8 @@ void sceGnmDrawCmdSetBlendControl(
 	    S_028780_ALPHA_COMB_FCN(ctrl->alphafunc) |
 	    S_028780_ALPHA_DESTBLEND(ctrl->alphadstmult) |
 	    S_028780_SEPARATE_ALPHA_BLEND(ctrl->separatealphaenable) |
-	    S_028780_ENABLE(ctrl->blendenabled);
+	    S_028780_ENABLE(ctrl->blendenabled) |
+	    S_028780_DISABLE_ROP3(ctrl->blendenabled);
 	setcontextregister(
 	    cmd, R_028780_CB_BLEND0_CONTROL + rtindex, ctrlflags
 	);
