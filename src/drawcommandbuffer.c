@@ -1563,6 +1563,15 @@ void sceGnmDrawCmdSetBlendControl(
 	);
 }
 
+void sceGnmDrawCmdSetBlendColor(
+    GnmCommandBuffer* cmd, float red, float green, float blue, float alpha
+) {
+	const float values[4] = {red, green, blue, alpha};
+	uint32_t words[4];
+	memcpy(words, values, sizeof(words));
+	setcontextregisterrange(cmd, R_028414_CB_BLEND_RED, words, 4);
+}
+
 void sceGnmDrawCmdSetDepthStencilControl(
     GnmCommandBuffer* cmd, const GnmDepthStencilControl* ctrl
 ) {

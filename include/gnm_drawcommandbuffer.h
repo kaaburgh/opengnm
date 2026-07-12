@@ -186,6 +186,9 @@ void sceGnmDrawCmdSetPointerUserData(
 void sceGnmDrawCmdSetBlendControl(
     GnmCommandBuffer* cmd, uint32_t rtindex, const GnmBlendControl* ctrl
 );
+void sceGnmDrawCmdSetBlendColor(
+    GnmCommandBuffer* cmd, float red, float green, float blue, float alpha
+);
 void sceGnmDrawCmdSetDepthStencilControl(
     GnmCommandBuffer* cmd, const GnmDepthStencilControl* ctrl
 );
