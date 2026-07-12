@@ -94,6 +94,8 @@ static TestResult test_helpers_resource_setup(void) {
 	);
 	utasserteq((long long)err, (long long)GNM_ERROR_OK);
 	utassert(sceGnmRtGetPitch(&rt) >= 128);
+	utasserteq((long long)rt.info.simple_float, 1LL);
+	utasserteq((long long)((rt.info.asuint >> 17) & 1), 1LL);
 	utassert(rtsize > 0);
 	utassert(rtalign > 0);
 	return test_success();

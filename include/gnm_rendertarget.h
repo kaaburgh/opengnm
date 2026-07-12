@@ -77,7 +77,7 @@ typedef struct {
 			uint32_t compression : 1;
 			uint32_t is_normalized : 1;
 			uint32_t is_int : 1;
-			uint32_t _unused3 : 1;
+			uint32_t simple_float : 1;
 			uint32_t is_scaled : 1;
 			uint32_t cmask_is_linear : 1;
 			uint32_t _unused4 : 6;

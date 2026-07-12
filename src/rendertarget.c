@@ -260,6 +260,10 @@ GnmError sceGnmCreateRenderTarget(
 	rt->info.is_normalized = rtchantype == GNM_NUMBER_UNORM ||
 				 rtchantype == GNM_NUMBER_SNORM ||
 				 rtchantype == GNM_NUMBER_SRGB;
+	// CB_COLOR_INFO.SIMPLE_FLOAT is required for normal color-target export
+	// conversion and blending on GFX6-GFX8. Mesa enables it for every color
+	// target, independently of the surface number type.
+	rt->info.simple_float = 1;
 	rt->info.is_int =
 	    rtchantype == GNM_NUMBER_UINT || rtchantype == GNM_NUMBER_SINT;
 	rt->info.is_scaled = rtchantype == GNM_NUMBER_UINT ||
