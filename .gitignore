@@ -6,6 +6,7 @@
 
 # Build directories
 build/
+build-codex/
 build-host/
 build-generic/
 build-warnings/
@@ -37,3 +38,7 @@ test.png
 *~
 .vscode/
 .idea/
+
+# Documentation build
+site/
+.venv/
