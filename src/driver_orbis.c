@@ -122,6 +122,7 @@ static void* resolvegnmdriversym(const char* name) {
 		count = uasize(modules);
 	}
 
+	/* First pass: look for a GnmDriver module (real firmware). */
 	for (size_t i = 0; i < count; i += 1) {
 		OrbisKernelModuleInfo info;
 		memset(&info, 0, sizeof(info));
@@ -140,6 +141,17 @@ static void* resolvegnmdriversym(const char* name) {
 		}
 		submitlogi("dlsym failed", result);
 		return NULL;
+	}
+
+	/* Second pass: no GnmDriver module found (e.g. HLE emulator).
+	   Try dlsym on every module — the HLE layer may expose the
+	   symbol through any module handle. */
+	for (size_t i = 0; i < count; i += 1) {
+		void* symbol = NULL;
+		result = sceKernelDlsym((int)modules[i], name, &symbol);
+		if (result == 0 && symbol) {
+			return symbol;
+		}
 	}
 
 	submitlog("GnmDriver module missing");
@@ -861,16 +873,7 @@ int32_t sceGnmDriverSetPsShader350(
 int32_t sceGnmDriverSetEmbeddedVsShader(
     uint32_t* cmd, uint32_t numdwords, int32_t shaderid, uint32_t shadermodifier
 ) {
-	const void* shaderptr = 0;
-	switch (shaderid) {
-	case GNM_EMBEDDED_VSH_FULLSCREEN:
-		shaderptr = s_embedded_vs_fullscreen;
-		break;
-	default:
-		return GNM_ERROR_INTERNAL_FAILURE;
-	}
-
-	return setvsshaderlocal(cmd, numdwords, shaderptr, shadermodifier);
+	return sceGnmSetEmbeddedVsShader(cmd, numdwords, (uint32_t)shaderid, shadermodifier);
 }
 
 int32_t sceGnmDriverSetEmbeddedPsShader(
