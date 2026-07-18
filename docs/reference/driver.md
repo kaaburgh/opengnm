@@ -2164,7 +2164,11 @@ int32_t sceGnmDriverSetEmbeddedVsShader(
 );
 ```
 
-Builds an embedded-vertex-shader bind PM4 packet.
+Binds an embedded (built-in) vertex shader. Forwards to
+`sceGnmSetEmbeddedVsShader(cmd, numdwords, shaderid, shadermodifier)` so that
+both real firmware and HLE emulators (shadPS4) handle the embedded fullscreen
+vertex shader through their own implementation. The `shadermodifier` encodes
+the fetch shader configuration (see `sceGnmVsRegsSetFetchShaderModifier`).
 
 ### sceGnmDriverSetEmbeddedPsShader
 
@@ -2174,7 +2178,12 @@ int32_t sceGnmDriverSetEmbeddedPsShader(
 );
 ```
 
-Builds an embedded-pixel-shader bind PM4 packet.
+Binds an embedded (built-in) pixel shader. Forwards to
+`sceGnmSetEmbeddedPsShader(cmd, numdwords, shaderid, 0)` for the
+`GNM_EMBEDDED_PSH_DUMMY` and `GNM_EMBEDDED_PSH_DUMMY_RG32` IDs; any other ID
+returns `GNM_ERROR_INTERNAL_FAILURE`. Routing through the HLE-exposed entry
+point lets shadPS4 write its own dummy PS code and registers instead of
+relying on firmware-only register blobs.
 
 ### sceGnmDriverInsertWaitFlipDone
 

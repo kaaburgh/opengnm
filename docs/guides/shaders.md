@@ -379,7 +379,10 @@ typedef union {
 
 ## Embedded Shaders
 
-The PS4 firmware includes built-in shaders for common operations:
+The PS4 firmware includes built-in shaders for common operations. opengnm
+exposes them through the `sceGnmDrawCmdSetEmbeddedVsShader` /
+`sceGnmDrawCmdSetEmbeddedPsShader` draw-command-buffer entry points, which
+flow through the `sceGnmDriverSetEmbedded*` wrappers in the Orbis backend.
 
 ### Embedded VS Shaders
 
@@ -393,6 +396,23 @@ The PS4 firmware includes built-in shaders for common operations:
 |------|-------------|
 | `GNM_EMBEDDED_PSH_DUMMY` | Dummy pixel shader |
 | `GNM_EMBEDDED_PSH_DUMMY_RG32` | Dummy pixel shader (RG32 format) |
+
+### Backend Behavior
+
+On **real PS4 hardware**, the `sceGnmDriverSetEmbedded*` wrappers delegate to
+the firmware, which writes the built-in shader code and registers.
+
+Under **HLE emulators** such as shadPS4 (where there is no
+`libSceGnmDriver` module), the wrappers forward to the HLE-exposed
+`sceGnmSetEmbeddedVsShader` / `sceGnmSetEmbeddedPsShader` entry points. The
+emulator then writes its own built-in dummy shader code and registers.
+
+This routing is necessary because the firmware dummy register blobs
+previously emitted by opengnm pointed at program addresses that only exist on
+real hardware; under shadPS4, `SearchBinaryInfo` would fail with "Shader
+binary info not found" as soon as a sample used an embedded PS shader. See
+[Backends — HLE Emulator Support](../backends.md#hle-emulator-support-shadps4)
+for the full rationale.
 
 ---
 

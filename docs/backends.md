@@ -15,10 +15,10 @@ the `OPENGNM_PLATFORM` CMake variable or the Makefile config.
 | **Target** | PS4 hardware | Host (macOS, Linux, Windows) |
 | **Compile define** | `OPENGNM_ORBIS` | `OPENGNM_GENERIC` |
 | **ABI attribute** | `OPENGNM_REQUIRE_ABI` (enables `__attribute__((sysv_abi))`) | Not set (ABI macro is no-op) |
-| **Submit path** | Forwards to firmware `libSceGnmDriver` | No-op / PM4 buffer capture |
+| **Submit path** | Forwards to firmware `libSceGnmDriver` (or HLE-exposed `sceGnm*` under shadPS4) | No-op / PM4 buffer capture |
 | **Draw commands** | Calls firmware `sceGnmDriver*` packet builders | Emits PM4 packets directly |
 | **Link dependencies** | `-lkernel -lSceGnmDriver -lSceVideoOut` | None |
-| **Use case** | Production PS4 apps, hardware testing | Development, CI, unit tests |
+| **Use case** | Production PS4 apps, hardware testing, shadPS4 HLE | Development, CI, unit tests |
 
 ---
 
@@ -73,6 +73,48 @@ retail firmware.
 ```sh
 -lopengnm -lkernel -lSceGnmDriver -lSceVideoOut
 ```
+
+### HLE Emulator Support (shadPS4)
+
+The Orbis backend also runs under HLE (high-level emulation) emulators such as
+**shadPS4**, where there is no real `libSceGnmDriver` firmware module loaded.
+Two accommodations make this work without source changes:
+
+#### Two-Pass Symbol Resolution
+
+`resolvegnmdriversym()` resolves firmware symbols in two passes:
+
+1. **First pass** — scans loaded modules for one named `libSceGnmDriver` and
+   looks up the symbol via `sceKernelDlsym` on that module handle. This is the
+   real-firmware path.
+2. **Second pass** — if no `libSceGnmDriver` module is present (HLE case), it
+   falls back to calling `sceKernelDlsym` on *every* loaded module handle. The
+   HLE layer exposes `sceGnm*` symbols through whichever module it registers
+   them under, so this finds them regardless of the host module name.
+
+Without the second pass, `sceGnmSubmitCommandBuffers` and the other forwarding
+wrappers would receive a NULL symbol pointer and command buffer submission
+would silently fail under shadPS4.
+
+#### Embedded Shader Routing
+
+The embedded shader wrappers
+[`sceGnmDriverSetEmbeddedVsShader`](reference/driver.md#scegnmdriversetembeddedvsshader)
+and
+[`sceGnmDriverSetEmbeddedPsShader`](reference/driver.md#scegnmdriversetembeddedpsshader)
+previously emitted firmware dummy register blobs (`s_embedded_vs_fullscreen`,
+`s_embedded_ps_dummy`) whose program addresses pointed at shader binaries that
+only exist on real hardware. Under shadPS4, `SearchBinaryInfo` would fail with
+"Shader binary info not found" as soon as a sample used
+`sceGnmDrawCmdSetEmbeddedPsShader` (e.g. the clear pass in `SampleTriangle`).
+
+Both wrappers now forward to the HLE-exposed
+`sceGnmSetEmbeddedVsShader` / `sceGnmSetEmbeddedPsShader` entry points, which
+write the emulator's built-in dummy shader code and registers. The local
+register blobs have been removed.
+
+This matches the existing embedded VS path and lets samples run past shader
+setup and render without crashing under shadPS4.
 
 ---
 
