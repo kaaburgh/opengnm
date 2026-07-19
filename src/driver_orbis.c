@@ -513,8 +513,13 @@ static int32_t validatesubmitargs(
 	return GNM_ERROR_OK;
 }
 
-#if 0  /* Submit wrappers disabled — let linker resolve from libSceGnmDriver.so PLT */
-__attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffers(
+#if OPENGNM_ENABLE_SUBMIT_WRAPPERS
+/* Submit wrappers with validation and logging.
+ * These intercept sceGnmSubmit* calls, validate arguments, log debug info,
+ * then forward to the firmware implementation via resolvegnmdriversym().
+ * Enable via CMake option OPENGNM_SUBMIT_WRAPPERS=ON.
+ * Disabled by default — submit calls resolve directly to libSceGnmDriver.so PLT. */
+int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffers(
     uint32_t count, void* const dcbgpuaddrs[], uint32_t* dcbsizes,
     void* const ccbgpuaddrs[], uint32_t* ccbsizes
 ) {
@@ -546,7 +551,7 @@ __attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffers(
 	return result;
 }
 
-__attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffers(
+int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffers(
     uint32_t count, void* const dcbgpuaddrs[], uint32_t* dcbsizes,
     void* const ccbgpuaddrs[], uint32_t* ccbsizes, uint32_t vohandle,
     uint32_t bufidx, uint32_t flipmode, int64_t fliparg
@@ -577,7 +582,7 @@ __attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffers(
 	return result;
 }
 
-__attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload(
+int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload(
     uint32_t workload, uint32_t count, void* const dcbgpuaddrs[],
     uint32_t* dcbsizes, void* const ccbgpuaddrs[], uint32_t* ccbsizes
 ) {
@@ -606,7 +611,7 @@ __attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitCommandBuffersForWorkload
 	return result;
 }
 
-__attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffersForWorkload(
+int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffersForWorkload(
     uint32_t workload, uint32_t count, void* const dcbgpuaddrs[],
     uint32_t* dcbsizes, void* const ccbgpuaddrs[], uint32_t* ccbsizes,
     uint32_t vohandle, uint32_t bufidx, uint32_t flipmode, int64_t fliparg
@@ -638,7 +643,7 @@ __attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitAndFlipCommandBuffersForW
 	return result;
 }
 
-__attribute__((weak)) int32_t PS4_SYSV_ABI sceGnmSubmitDone(void) {
+int32_t PS4_SYSV_ABI sceGnmSubmitDone(void) {
 	static SubmitDoneFn real_submit_done = NULL;
 	if (!real_submit_done) {
 		real_submit_done = (SubmitDoneFn)resolvegnmdriversym(
@@ -680,7 +685,7 @@ int32_t PS4_SYSV_ABI sceGnmRequestFlipAndSubmitDoneForWorkload(void) {
 	}
 	return real_request();
 }
-#endif  /* Submit wrappers disabled */
+#endif  /* OPENGNM_ENABLE_SUBMIT_WRAPPERS */
 
 /* Compute queue management */
 extern int32_t sceGnmMapComputeQueue(

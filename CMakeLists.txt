@@ -10,6 +10,13 @@ include(CMakePackageConfigHelpers)
 set(OPENGNM_PLATFORM "auto" CACHE STRING "opengnm platform: auto, orbis, or generic")
 set_property(CACHE OPENGNM_PLATFORM PROPERTY STRINGS auto orbis generic)
 
+# Submit wrappers: when ON, opengnm intercepts sceGnmSubmit* calls to add
+# argument validation and debug logging before forwarding to the firmware.
+# When OFF (default), submit calls resolve directly to libSceGnmDriver.so
+# via PLT. OFF is required for shadPS4 (HLE has no firmware module for
+# resolvegnmdriversym to find) and is also the simpler path on real hardware.
+option(OPENGNM_SUBMIT_WRAPPERS "Enable submit wrappers with validation and logging" OFF)
+
 if(OPENGNM_PLATFORM STREQUAL "orbis")
     set(OPENGNM_ORBIS_PLATFORM ON)
 elseif(OPENGNM_PLATFORM STREQUAL "generic")
@@ -100,6 +107,9 @@ endif()
 
 if(OPENGNM_ORBIS_PLATFORM)
     target_compile_definitions(opengnm PUBLIC OPENGNM_ORBIS OPENGNM_REQUIRE_ABI)
+    if(OPENGNM_SUBMIT_WRAPPERS)
+        target_compile_definitions(opengnm PRIVATE OPENGNM_ENABLE_SUBMIT_WRAPPERS)
+    endif()
     target_link_libraries(opengnm PUBLIC kernel SceGnmDriver SceVideoOut)
 else()
     target_compile_definitions(opengnm PUBLIC OPENGNM_GENERIC)
