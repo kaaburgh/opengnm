@@ -117,7 +117,7 @@ static void* resolvegnmdriversym(const char* name) {
 	OrbisKernelModule modules[128];
 	size_t available = 0;
 	int result = sceKernelGetModuleList(
-	    modules, sizeof(modules), &available
+	    modules, uasize(modules), &available
 	);
 	if (result != 0) {
 		submitlogi("module list failed", result);
@@ -188,53 +188,64 @@ static void* resolvegnmdriversym(const char* name) {
  * binaries that the HLE layer can resolve).
  */
 #if OPENGNM_ORBIS_HAS_LIBKERNEL
-static bool s_is_hle_checked = false;
+static volatile bool s_is_hle_checked = false;
 static bool s_is_hle = false;
 
 static bool opengnm_is_hle_runtime(void) {
 	if (s_is_hle_checked) {
 		return s_is_hle;
 	}
-	s_is_hle_checked = true;
 
+	bool detected = false;  /* default: real hardware */
 	OrbisKernelModule modules[128];
 	size_t available = 0;
 	int result = sceKernelGetModuleList(
-	    modules, sizeof(modules), &available
+	    modules, uasize(modules), &available
 	);
-	if (result != 0) {
-		/* Cannot enumerate modules — assume real hardware. */
-		s_is_hle = false;
-		return s_is_hle;
-	}
-
-	size_t count = available;
-	if (count > uasize(modules)) {
-		count = uasize(modules);
-	}
-
-	for (size_t i = 0; i < count; i += 1) {
-		OrbisKernelModuleInfo info;
-		memset(&info, 0, sizeof(info));
-		info.size = sizeof(info);
-		if (sceKernelGetModuleInfo(modules[i], &info) != 0) {
-			continue;
+	if (result == 0 && available > 0) {
+		size_t count = available;
+		if (count > uasize(modules)) {
+			count = uasize(modules);
 		}
-		if (strstr(info.name, "GnmDriver")) {
-			/* Real firmware module found — not HLE. */
-			s_is_hle = false;
-			return s_is_hle;
+
+		bool found_gnmdriver = false;
+		for (size_t i = 0; i < count; i += 1) {
+			OrbisKernelModuleInfo info;
+			memset(&info, 0, sizeof(info));
+			info.size = sizeof(info);
+			if (sceKernelGetModuleInfo(modules[i], &info) != 0) {
+				continue;
+			}
+			if (strstr(info.name, "GnmDriver")) {
+				found_gnmdriver = true;
+				break;
+			}
+		}
+		/* No GnmDriver module (and modules were enumerable) → HLE.
+		 * If enumeration returned 0 modules, we can't tell — default
+		 * to real HW to avoid emitting PM4 with firmware-embedded
+		 * shader addresses on a misdetected HLE setup. */
+		if (!found_gnmdriver) {
+			detected = true;
 		}
 	}
+	/* else: enumeration failed or returned 0 modules — assume real HW. */
 
-	/* No GnmDriver module — HLE emulator. */
-	s_is_hle = true;
-	return s_is_hle;
+	/* Publish the result: set s_is_hle BEFORE the flag so a concurrent
+	 * thread that observes s_is_hle_checked==true also sees the correct
+	 * s_is_hle value. The result is deterministic (module list doesn't
+	 * change), so concurrent computation yields the same value. */
+	s_is_hle = detected;
+	__atomic_thread_fence(__ATOMIC_RELEASE);
+	s_is_hle_checked = true;
+	return detected;
 }
 #else
 static bool opengnm_is_hle_runtime(void) {
 	/* Without libkernel we cannot enumerate modules. Assume real HW
-	 * so we use the safe local PM4 emission path. */
+	 * so we use the safe local PM4 emission path (avoids the FW 9.00
+	 * crash). This branch is unreachable on shadPS4, which provides
+	 * libkernel, so HLE emulators never hit this default. */
 	return false;
 }
 #endif
@@ -456,13 +467,16 @@ static int32_t setvsshaderlocal(
 /*
  * Embedded shader register blobs.
  * These are the register-level representations of the firmware's built-in
- * embedded shaders (fullscreen VS, dummy PS). We emit them locally via
- * setvsshaderlocal/setpsshaderlocal instead of calling the firmware
- * sceGnmSetEmbeddedVsShader/sceGnmSetEmbeddedPsShader, because the
- * firmware shader-set helpers crash on FW 9.00 in certain caller
- * contexts (see comment above). Local PM4 emission produces identical
- * GPU state and is safe in all contexts. This also works on HLE
- * emulators (shadPS4) since they process PM4 packets directly.
+ * embedded shaders (fullscreen VS, dummy PS). On real hardware we emit
+ * them locally via setvsshaderlocal/setpsshaderlocal instead of calling
+ * the firmware sceGnmSetEmbeddedVsShader/sceGnmSetEmbeddedPsShader,
+ * because the firmware shader-set helpers crash on FW 9.00 in certain
+ * caller contexts (see comment above). Local PM4 emission produces
+ * identical GPU state and is safe in all contexts.
+ * On HLE emulators (shadPS4), these blobs are NOT used — the embedded
+ * shader wrappers forward to sceGnmSetEmbedded*Shader instead, since
+ * the blobs reference firmware-embedded shader addresses that don't
+ * exist under HLE.
  */
 static const uint8_t s_embedded_vs_fullscreen[] = {
     0xf1, 0x00, 0xe0, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -994,7 +1008,13 @@ int32_t sceGnmDriverSetEmbeddedVsShader(
 		}
 		return setvsshaderlocal(cmd, numdwords, shaderptr, shadermodifier);
 	}
-	return sceGnmSetEmbeddedVsShader(cmd, numdwords, (uint32_t)shaderid, shadermodifier);
+	/* HLE path — validate shaderid before forwarding. */
+	switch (shaderid) {
+	case GNM_EMBEDDED_VSH_FULLSCREEN:
+		return sceGnmSetEmbeddedVsShader(cmd, numdwords, (uint32_t)shaderid, shadermodifier);
+	default:
+		return GNM_ERROR_INTERNAL_FAILURE;
+	}
 }
 
 int32_t sceGnmDriverSetEmbeddedPsShader(
