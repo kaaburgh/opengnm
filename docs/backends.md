@@ -102,19 +102,25 @@ The embedded shader wrappers
 [`sceGnmDriverSetEmbeddedVsShader`](reference/driver.md#scegnmdriversetembeddedvsshader)
 and
 [`sceGnmDriverSetEmbeddedPsShader`](reference/driver.md#scegnmdriversetembeddedpsshader)
-previously emitted firmware dummy register blobs (`s_embedded_vs_fullscreen`,
-`s_embedded_ps_dummy`) whose program addresses pointed at shader binaries that
-only exist on real hardware. Under shadPS4, `SearchBinaryInfo` would fail with
-"Shader binary info not found" as soon as a sample used
-`sceGnmDrawCmdSetEmbeddedPsShader` (e.g. the clear pass in `SampleTriangle`).
+use a **runtime detection** to select between two emission paths:
 
-Both wrappers now forward to the HLE-exposed
-`sceGnmSetEmbeddedVsShader` / `sceGnmSetEmbeddedPsShader` entry points, which
-write the emulator's built-in dummy shader code and registers. The local
-register blobs have been removed.
+- **Real hardware** (libSceGnmDriver module loaded): emit the PM4
+  register-write sequence locally using the embedded shader register blobs
+  (`s_embedded_vs_fullscreen`, `s_embedded_ps_dummy`,
+  `s_embedded_ps_dummyrg32`). This avoids the FW 9.00 crash in firmware
+  shader-set helpers (`sceGnmSetVsShader` crashes inside the GPU work pump
+  context) and produces identical GPU state. The reserved dword space is
+  padded with `PKT3_NOP`.
+- **HLE emulator** (no GnmDriver module — e.g. shadPS4): forward to the
+  HLE-exposed `sceGnmSetEmbeddedVsShader` / `sceGnmSetEmbeddedPsShader`
+  entry points. The local register blobs reference firmware-embedded shader
+  addresses that don't exist under HLE, so `SearchBinaryInfo` would fail.
+  The HLE layer provides its own built-in dummy shader code and registers.
 
-This matches the existing embedded VS path and lets samples run past shader
-setup and render without crashing under shadPS4.
+The runtime check (`opengnm_is_hle_runtime`) enumerates loaded modules via
+`sceKernelGetModuleList` and looks for a module named `GnmDriver`. The
+result is cached after the first call. This is the same detection logic
+used by `resolvegnmdriversym`.
 
 ---
 

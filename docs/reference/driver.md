@@ -2164,11 +2164,14 @@ int32_t sceGnmDriverSetEmbeddedVsShader(
 );
 ```
 
-Binds an embedded (built-in) vertex shader. Forwards to
-`sceGnmSetEmbeddedVsShader(cmd, numdwords, shaderid, shadermodifier)` so that
-both real firmware and HLE emulators (shadPS4) handle the embedded fullscreen
-vertex shader through their own implementation. The `shadermodifier` encodes
-the fetch shader configuration (see `sceGnmVsRegsSetFetchShaderModifier`).
+Binds an embedded (built-in) vertex shader. Uses runtime HLE detection:
+on real hardware, emits the PM4 register-write sequence locally using the
+embedded fullscreen VS register blob and pads with `PKT3_NOP` (avoids the
+FW 9.00 crash in firmware shader-set helpers); on HLE emulators, forwards
+to `sceGnmSetEmbeddedVsShader`. Only `GNM_EMBEDDED_VSH_FULLSCREEN` is
+supported; any other ID returns `GNM_ERROR_INTERNAL_FAILURE`. The
+`shadermodifier` encodes the fetch shader configuration (see
+`sceGnmVsRegsSetFetchShaderModifier`).
 
 ### sceGnmDriverSetEmbeddedPsShader
 
@@ -2178,12 +2181,14 @@ int32_t sceGnmDriverSetEmbeddedPsShader(
 );
 ```
 
-Binds an embedded (built-in) pixel shader. Forwards to
-`sceGnmSetEmbeddedPsShader(cmd, numdwords, shaderid, 0)` for the
-`GNM_EMBEDDED_PSH_DUMMY` and `GNM_EMBEDDED_PSH_DUMMY_RG32` IDs; any other ID
-returns `GNM_ERROR_INTERNAL_FAILURE`. Routing through the HLE-exposed entry
-point lets shadPS4 write its own dummy PS code and registers instead of
-relying on firmware-only register blobs.
+Binds an embedded (built-in) pixel shader. Uses runtime HLE detection:
+on real hardware, emits the PM4 register-write sequence locally using the
+embedded dummy PS register blob (standard or RG32 variant by ID) and pads
+the reserved 40-dword space with `PKT3_NOP` (avoids the FW 9.00 crash in
+firmware shader-set helpers); on HLE emulators, forwards to
+`sceGnmSetEmbeddedPsShader`. Supports `GNM_EMBEDDED_PSH_DUMMY` and
+`GNM_EMBEDDED_PSH_DUMMY_RG32`; any other ID returns
+`GNM_ERROR_INTERNAL_FAILURE`.
 
 ### sceGnmDriverInsertWaitFlipDone
 

@@ -399,18 +399,24 @@ flow through the `sceGnmDriverSetEmbedded*` wrappers in the Orbis backend.
 
 ### Backend Behavior
 
-On **real PS4 hardware**, the `sceGnmDriverSetEmbedded*` wrappers delegate to
-the firmware, which writes the built-in shader code and registers.
+The `sceGnmDriverSetEmbedded*` wrappers use runtime HLE detection to select
+between two emission paths:
+
+On **real PS4 hardware** (libSceGnmDriver module loaded), the wrappers emit
+the PM4 register-write sequence locally using embedded shader register blobs
+and pad the reserved dword space with `PKT3_NOP`. This avoids the FW 9.00
+crash in firmware shader-set helpers (`sceGnmSetVsShader` crashes inside the
+GPU work pump context) while producing identical GPU state.
 
 Under **HLE emulators** such as shadPS4 (where there is no
 `libSceGnmDriver` module), the wrappers forward to the HLE-exposed
 `sceGnmSetEmbeddedVsShader` / `sceGnmSetEmbeddedPsShader` entry points. The
 emulator then writes its own built-in dummy shader code and registers.
 
-This routing is necessary because the firmware dummy register blobs
-previously emitted by opengnm pointed at program addresses that only exist on
-real hardware; under shadPS4, `SearchBinaryInfo` would fail with "Shader
-binary info not found" as soon as a sample used an embedded PS shader. See
+The HLE forwarding path is necessary because the local register blobs
+reference program addresses that only exist on real hardware; under shadPS4,
+`SearchBinaryInfo` would fail with "Shader binary info not found" as soon as
+a sample used an embedded PS shader. See
 [Backends — HLE Emulator Support](../backends.md#hle-emulator-support-shadps4)
 for the full rationale.
 
