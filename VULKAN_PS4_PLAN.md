@@ -562,9 +562,14 @@ indirect draws, and compute pipelines.
 format tests pass.
 
 **Remaining work:**
-- libpsbc orbis cross-compile target (currently host-only; orbis build
-  uses stub shader path)
 - PS4 hardware testing (test_triangle.self on PS4)
 - RetroArch link smoke test on PS4
 - Phase 4: Optional extensions (on demand)
 - Phase 5: Vulkan-ValidationLayers conformance
+
+**Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
+`libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
+links that archive and defines `VK_PS4_HAVE_PSBC=1`, so the PS4 ICD uses the
+real SPIR-V → GCN compilation path for the currently supported vertex and
+fragment shader headers instead of the stub shader path. Compute, geometry,
+and tessellation GNM binary headers remain follow-up work.

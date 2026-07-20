@@ -92,6 +92,12 @@ typedef struct {
 } GnmPsShader;
 _Static_assert(sizeof(GnmPsShader) == 0x3c, "");
 
+typedef struct {
+	GnmShaderCommonData common;
+	GnmCsStageRegisters registers;
+} GnmCsShader;
+_Static_assert(sizeof(GnmCsShader) == 0x24, "");
+
 typedef enum {
 	GNM_SHB_PS = 0,
 	GNM_SHB_VS_VS = 1,
