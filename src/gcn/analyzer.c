@@ -40,8 +40,10 @@ static inline GcnError appendorupdate(
 	}
 
 	// update references
-	// TODO: referencing instructions here directly sucks,
-	// and may bite back in the future
+	// NOTE: referencing instruction operands directly here is a design
+	// trade-off — it couples the analyzer to instruction internals.
+	// Acceptable for the fetch-shader-only use case; revisit if the
+	// analyzer is used more broadly.
 	const GcnOperandField basefield = instr->dsts[0].field;
 	const GcnOperandFieldInfo* src1 = &instr->srcs[1];
 	const uint32_t dstdwords = instr->dsts[0].numbits / 32;

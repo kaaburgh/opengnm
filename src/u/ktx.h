@@ -571,9 +571,9 @@ UKtxError uktx_read(UKtxContext* ctx, UKtx* outinfo) {
 		return UKTX_ERR_INVAL_FACES;
 	}
 
-	// TODO: mip map generation
-	// If numberOfMipmapLevels equals 0, it indicates that a full mipmap
-	// pyramid should be generated from level 0 at load time
+	// Mip map generation not implemented — if numberOfMipmapLevels is 0,
+	// it indicates a full mipmap pyramid should be generated from level 0.
+	// Currently returns unsupported instead of generating mipmaps.
 	if (numlevels == 0) {
 		return UKTX_ERR_UNSUPPORTED;
 	}

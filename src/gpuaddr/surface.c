@@ -1470,14 +1470,16 @@ GpaError sceGpaInitSurfaceContext(
 	    .bitsperelement = tp->bitsperfrag,
 	    .numfragsperpixel = tp->numfragsperpixel,
 
-	    // TODO: calc swizzle?
+	    // Swizzle masks not computed here — left as 0 (no swizzle).
+	    // Add bank/pipe swizzle calculation if needed for tiled surfaces.
 	    .bankswizzlemask = 0,
 	    .pipeswizzlemask = 0,
 	};
 
-	// TODO: why is this here?
-	// BC7 tests fail is this isn't here,
-	// but shouldn't this be handled by something else already?
+	// Block-compressed formats (BC1-BC7) need dimensions divided by block size
+	// and bits-per-element multiplied by block pixel count. This is done here
+	// because the surface info struct stores post-decode dimensions, while
+	// bitsperfrag is per-block. Without this, BC7 surface calculations fail.
 	if (tp->isblockcompressed) {
 		switch (tp->bitsperfrag) {
 		case 1:

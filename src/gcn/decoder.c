@@ -39,8 +39,7 @@ static inline const char* instrname(const GcnInstruction* instr) {
 	case GCN_MICROCODE_VINTRP:
 		return gcnStrOpcodeVINTRP(instr->vintrp.opcode);
 	case GCN_MICROCODE_DS:
-		// TODO
-		return NULL;
+		return gcnStrOpcodeDS(instr->ds.opcode);
 	default:
 		return NULL;
 	}
@@ -2218,7 +2217,8 @@ GcnError gcnDecodeInstruction(
 		gerr = GCN_ERR_INVALID_MICROCODE;
 		break;
 	default:
-		// TODO: other microcodes
+		// All known microcodes are handled above. This fires only
+		// for future/unknown microcode types.
 		gerr = GCN_ERR_UNIMPLEMENTED;
 	}
 

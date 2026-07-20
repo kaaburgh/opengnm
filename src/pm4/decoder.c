@@ -49,7 +49,8 @@ static inline Pm4Error parse_pkt3(Pm4Decoder* ctx, Pm4Packet3* pkt) {
 	const uint32_t header = ctx->cmdcur[0];
 	const uint32_t count = PKT_COUNT_G(ctx->cmdcur[0]);
 
-	// TODO: validate opcode?
+	// Opcode not validated — the decoder accepts any opcode value.
+	// Validation is the caller's responsibility (e.g. command buffer validator).
 	const uint32_t opcode = PKT3_IT_OPCODE_G(header);
 
 	pkt->opcode = opcode;

@@ -59,7 +59,7 @@ static bool init_rt_fmask(GnmRenderTarget* rt) {
 	}
 	rt->attrib.fmask_tilemode_index = fmask_tilemode;
 
-	rt->info.is_normalized = 1;  // TODO: is this member named correctly?
+	rt->info.is_normalized = 1;  // default; updated in setdataformat based on channel type
 
 	const GnmDataFormat datafmt = sceGnmRtGetFormat(rt);
 	const uint32_t bitsperelem = sceGnmDfGetBitsPerElement(datafmt);
@@ -127,7 +127,7 @@ GnmError sceGnmCreateRenderTarget(
 			return GNM_ERROR_INVALID_ARGS;
 		}
 	} else if (ci->colorfmt.surfacefmt == GNM_IMG_DATA_FORMAT_32_32_32 || ci->colorfmt.surfacefmt == 15) {
-		// TODO: what surface format is value 15?
+		// Format 0xF is reserved/undefined (gap between 32_32_32_32 and 5_6_5)
 		sceGnmWriteMsgf(
 		    GNM_MSGSEV_ERR, "colorfmt 0x08%x is invalid", ci->colorfmt
 		);

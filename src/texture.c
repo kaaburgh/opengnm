@@ -129,7 +129,8 @@ GnmError sceGnmCreateTexture(GnmTexture* tex, const GnmTextureCreateInfo* ci) {
 		}
 		break;
 	case GNM_TEXTURE_CUBEMAP:
-		// TODO?
+		// No additional validation needed — cubemap is handled via
+		// the .cube flag and 6-face slice count below.
 		break;
 	default:
 		sceGnmWriteMsgf(

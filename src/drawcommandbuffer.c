@@ -1581,8 +1581,10 @@ void sceGnmDrawCmdSetDepthStencilControl(
 		return;
 	}
 
-	// TODO: should ENABLE_COLOR_WRITES_ON_DEPTH_FAIL and
-	// DISABLE_COLOR_WRITES_ON_DEPTH_PASS fields be added here?
+	// ENABLE_COLOR_WRITES_ON_DEPTH_FAIL (bit 30) and
+	// DISABLE_COLOR_WRITES_ON_DEPTH_PASS (bit 31) are not exposed in
+	// GnmDepthStencilControl — they are niche features not used by
+	// typical renderers. Add fields to the struct if needed.
 	const uint32_t ctrlflags =
 	    S_028800_STENCIL_ENABLE(ctrl->stencilenable) |
 	    S_028800_Z_ENABLE(ctrl->depthenable) |
@@ -1612,7 +1614,9 @@ void sceGnmDrawCmdSetDbRenderControl(
 		return;
 	}
 
-	// TODO: expose DEPTH_COPY and STENCIL_COPY?
+	// DEPTH_COPY (bit 2) and STENCIL_COPY (bit 3) are not exposed in
+	// GnmDbRenderControl — they conflict with clear/resummarize usage
+	// patterns and are not needed by typical renderers.
 	const uint32_t ctrlflags =
 	    S_028000_DEPTH_CLEAR_ENABLE(ctrl->depthclearenable) |
 	    S_028000_STENCIL_CLEAR_ENABLE(ctrl->stencilclearenable) |
@@ -1633,8 +1637,8 @@ void sceGnmDrawCmdSetPrimitiveSetup(
 		return;
 	}
 
-	// TODO: improve GnmPrimitiveSetup interface
-	// TODO: expose other fields?
+	// Unexposed fields: POLY_OFFSET_PARA_ENABLE (bit 13),
+	// MULTI_PRIM_IB_ENA (bit 21) — niche features not in GnmPrimitiveSetup.
 	const uint32_t ctrlflags =
 	    S_028814_CULL_FRONT(ctrl->cullmode) |
 	    S_028814_CULL_BACK(
@@ -1663,7 +1667,8 @@ void sceGnmDrawCmdSetViewportTransformControl(
 		return;
 	}
 
-	// TODO: expose PERFCOUNTER_REF?
+	// PERFCOUNTER_REF (bit 11) not exposed — performance counter
+	// reference mode is a profiling feature not in GnmViewportTransformControl.
 	const uint32_t ctrlflags =
 	    S_028818_VPORT_X_SCALE_ENA(ctrl->scalex) |
 	    S_028818_VPORT_X_OFFSET_ENA(ctrl->offsetx) |

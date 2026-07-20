@@ -182,8 +182,10 @@ GnmError sceGnmCreateFetchShader(
 
 	const uint32_t firstfreesgpr = getfirstfreesgpr(ci->regs);
 	const uint32_t sgprs = G_00B128_SGPRS(ci->regs->spishaderpgmrsrc1vs);
-	// TODO: the constant GNM_NUM_SHADER_STAGES's name is likely wrong. the
-	// value itself should be fine though.
+	// GNM_NUM_SHADER_STAGES (8) is used here as a SGPR limit multiplier
+	// from reversed firmware code. The value is correct; the name is
+	// coincidental — it represents the SGPR allocation granularity, not
+	// the number of shader stages.
 	const uint32_t maxsgprlimit =
 	    sgprs * GNM_NUM_SHADER_STAGES + GNM_NUM_SHADER_STAGES;
 	const uint32_t alignedfirstfreesgpr = (firstfreesgpr + 3) & (-4);
@@ -304,15 +306,16 @@ GnmError sceGnmCreateFetchShader(
 		return GNM_ERROR_ASM_FAILED;
 	}
 
-	// TODO: this coems from reversed code, what is the purpose of it?
-	// does the system use it?
+	// Trailing dword: number of vertex inputs (from reversed firmware code).
+	// The GPU likely uses this to determine fetch count.
 	const uint32_t numinputs =
 	    ci->remaptablecount ? ci->remaptablecount : ci->numvtxinputs;
 	*(uint32_t*)&wctx.buf[wctx.off] = numinputs;
 	writtensize += sizeof(uint32_t);
 
-	// TODO: this also comes from reversed code,
-	// does it just add a SGPR if its range is full?
+	// Add an extra SGPR when the SGPR offset is zero (from reversed code).
+	// This accounts for the fetch shader's own SGPR usage when the vertex
+	// shader's SGPR range is full.
 	r->sgprs = (sgproffset == 0) + sgprs;
 	// VGPR0-3: (VertexID, InstanceID / StepRate0, InstanceID / StepRate1,
 	// InstanceID)

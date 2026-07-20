@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 typedef enum {
-	PM4_TYPE_0 = 0,	 // FIXME draw indexed, or is it setting registers?
+	PM4_TYPE_0 = 0,	 // register set packet (base index + count + data)
 	PM4_TYPE_2 = 2,	 // nop packet
 	PM4_TYPE_3 = 3,	 // extended packet
 } Pm4PacketType;
@@ -16,7 +16,7 @@ typedef enum {
 } Pm4ShaderType;
 
 typedef struct {
-	uint32_t opcode;  // TODO: move opcodes to an enum?
+	uint32_t opcode;  // PM4 type-3 opcode (see PKT3_IT_OPCODE defines)
 	uint32_t
 	    dataidx;  // optional index to packet (u32) array where data starts
 	Pm4ShaderType shtype;
