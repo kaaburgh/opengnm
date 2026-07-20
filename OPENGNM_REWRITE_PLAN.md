@@ -289,7 +289,7 @@ grep -rn "sceGnmSdma" /Users/bizkut/Downloads/PS5/homebrew/shadPS4/src/
 | Orbis backend | Firmware delegation | Source complete (Phase 3) | Docker/orbis build + link smoke pass; PS4 smoke test pending |
 | Generic backend | Host testing | Done (Phase 4) | CMake + Make tests pass |
 | gpuaddr | AMD PAL math | Done (Phase 2) | — |
-| Regression tests | Host behavior + ABI edge cases | 50 passing | Hardware validation pending |
+| Regression tests | Host behavior + ABI edge cases | 88 passing | Hardware validation done (Phase 5C) |
 
 **Proven algorithms to port (AMD PAL-derived, not rewrite from zero):**
 - gpuaddr / AddrLib surface computation: 4,164 LOC (AMD PAL-derived math)
@@ -804,16 +804,18 @@ semantic expectations in one failure message.
 2. **Phase 2 (DONE)** — Core implementation. 24 source files, libopengnm.a builds.
 3. **Phase 3 (DONE)** — Runtime delegation (orbis backend). 74 real externs + 14 sceGnmDriver* wrappers + 172 retail stubs + 11 validate stubs + 2 platform functions.
 4. **Phase 4 (DONE)** — Generic backend (host testing). 14 PM4 packet builders + real sceGnm* + 172 stubs + 11 validate stubs + 2 platform functions.
-5. **Phase 5A (DONE)** — Host tests (54 tests, all passing via CMake/CTest and Makefile).
+5. **Phase 5A (DONE)** — Host tests (88 tests, all passing via CMake/CTest and Makefile).
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
 7. **Phase 5C (DONE)** — Hardware hardening package matrix: submit/EOP, triangle, composite blit, composite DMA, renderer-draw wrapper, repeated launch stability, and crash logs.
-8. **RPCSX cross-audit (NEXT)** — Compare PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4 side by side.
-9. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
+8. **TODO cleanup (DONE)** — All 18 TODO/FIXME comments resolved across 10 source files. Zero TODO/FIXME remaining.
+9. **RPCSX cross-audit (NEXT)** — Compare PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4 side by side.
+10. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
-After Phase 5A, host behavior is regression-tested. After Phase 5B, the
+After Phase 5A, host behavior is regression-tested (88 tests). After Phase 5B, the
 OpenOrbis linker path, installable package path, VideoOut presentation path, and
 GNM submit/EOP path are verified on PS4 hardware. Phase 5C broadens that into a
-small reusable-GPU-API confidence matrix before Eden defaults to OpenGNM. The
-first downstream adapter unit is in place; opengnm-psbc (shader compiler) and
-migration of old tooling headers can continue while the hardware matrix runs.
+small reusable-GPU-API confidence matrix before Eden defaults to OpenGNM. All
+TODO/FIXME comments are resolved. The first downstream adapter unit is in place;
+opengnm-psbc (shader compiler) is complete and hardware-validated. Migration of
+old tooling headers can continue while the RPCSX cross-audit runs.

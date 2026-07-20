@@ -26,11 +26,11 @@ against opengnm unmodified.
 
 ## Status
 
-Phases 1-4, Phase 5A, and Phase 5B are complete. The OpenOrbis Docker build,
-PS4-target link smoke, PS4 hardware-smoke package build, FTP staging, and PS4
-hardware run all pass. All 207+ `sceGnm*` functions are implemented across both
-backends, and the generic host backend passes 54 tests via CMake/CTest and
-Makefile.
+Phases 0-5D are complete, plus a full TODO/FIXME cleanup pass. The OpenOrbis
+Docker build, PS4-target link smoke, PS4 hardware-smoke package build, FTP
+staging, and PS4 hardware run all pass. All 207+ `sceGnm*` functions are
+implemented across both backends, and the generic host backend passes 88 tests
+via CMake/CTest and Makefile. Zero TODO/FIXME comments remain in the source.
 
 The verified PS4 hardware smoke result is a full-screen green status view with
 scrolling white bar and digit `0`, confirming VideoOut presentation and the GNM
