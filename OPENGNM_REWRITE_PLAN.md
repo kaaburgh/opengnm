@@ -808,7 +808,7 @@ semantic expectations in one failure message.
 6. **Phase 5B (DONE)** — OpenOrbis/orbis build + link smoke + package generation + PS4 hardware smoke run passed.
 7. **Phase 5C (DONE)** — Hardware hardening package matrix: submit/EOP, triangle, composite blit, composite DMA, renderer-draw wrapper, repeated launch stability, and crash logs.
 8. **TODO cleanup (DONE)** — All 18 TODO/FIXME comments resolved across 10 source files. Zero TODO/FIXME remaining.
-9. **RPCSX cross-audit (NEXT)** — Compare PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4 side by side.
+9. **RPCSX cross-audit (DONE)** — Compared PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4. Replaced hand-written hardware init with firmware-captured sequences from shadPS4. Added Neo/OG and FW version-specific init sequences. gpuaddr tiling already matches (macro tile mode, pipe config, tile split, bank height all present in tilemodes.c). EOP invL2 bit not applicable (GFX9+ only, PS4 is GFX7).
 10. **Downstream migration (DONE)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present. PSSL and GNF tooling headers extracted into opengnm compat layer. All freegnm-examples (triangle, cube, shader-test, eden-composite-blit, eden-composite-dma, eden-triangle-wrapper, gltf, indirect, instances) build with `USE_OPENGNM=1`.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
