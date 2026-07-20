@@ -21,6 +21,7 @@
 #include "gnm_shader.h"
 #include "platform.h"
 #include "pm4/sid.h"
+#include "hwinit_sequences.h"
 
 #include "u/utility.h"
 
@@ -149,174 +150,40 @@ static uint32_t drawinitiator(SceGnmDrawFlags flags, uint32_t source_select) {
 int32_t sceGnmDriverDrawInitDefaultHardwareState350(
     uint32_t* cmd, uint32_t numdwords
 ) {
-	const uint32_t maxdwords = 256;
+	const uint32_t maxdwords = HW_INIT_PACKET_SIZE;
 	if (!cmd || numdwords < maxdwords) {
 		return 0;
 	}
 
 	uint32_t* startcmd = cmd;
 
-	cmd[0] = PKT3(PKT3_CONTEXT_CONTROL, 1, 0);
-	cmd[1] = CC0_UPDATE_LOAD_ENABLES(1);
-	cmd[2] = CC1_UPDATE_SHADOW_ENABLES(1);
-	cmd += 3;
+	/* ClearContextState preamble (12 dwords) */
+	memcpy(cmd, CLEAR_STATE_SEQUENCE, CLEAR_STATE_SEQUENCE_LEN * 4);
+	cmd += CLEAR_STATE_SEQUENCE_LEN;
 
-	cmd[0] = PKT3(PKT3_CLEAR_STATE, 0, 0);
-	cmd[1] = 0;
-	cmd += 2;
+	/* Select the firmware-captured init sequence based on GPU mode */
+	const uint32_t* seq;
+	size_t seqlen;
+	const GnmGpuMode gpumode = sceGnmGpuMode();
+	if (gpumode == GNM_GPU_NEO) {
+		seq = INIT_SEQUENCE_350_NEO;
+		seqlen = INIT_SEQUENCE_350_NEO_LEN;
+	} else {
+		seq = INIT_SEQUENCE_350;
+		seqlen = INIT_SEQUENCE_350_LEN;
+	}
 
-	cmd[0] = PKT3(PKT3_ACQUIRE_MEM, 5, 0);
-	cmd[1] = S_0301F0_CB0_DEST_BASE_ENA(1) | S_0301F0_CB1_DEST_BASE_ENA(1) |
-		 S_0301F0_CB2_DEST_BASE_ENA(1) | S_0301F0_CB3_DEST_BASE_ENA(1) |
-		 S_0301F0_CB4_DEST_BASE_ENA(1) | S_0301F0_CB5_DEST_BASE_ENA(1) |
-		 S_0301F0_CB6_DEST_BASE_ENA(1) | S_0301F0_CB7_DEST_BASE_ENA(1) |
-		 S_0301F0_DB_DEST_BASE_ENA(1) | S_0301F0_TC_WB_ACTION_ENA(1) |
-		 S_0301F0_TCL1_ACTION_ENA(1) | S_0301F0_TC_ACTION_ENA(1) |
-		 S_0301F0_CB_ACTION_ENA(1) | S_0301F0_DB_ACTION_ENA(1) |
-		 S_0301F0_SH_KCACHE_ACTION_ENA(1);
-	cmd[2] = 0xffffffff;
-	cmd[3] = 0;
-	cmd[4] = 0;
-	cmd[5] = 0;
-	cmd[6] = 10 & 0xffff;
-	cmd += 7;
+	/* Copy init sequence, skipping the first 2 dwords (CLEAR_STATE
+	 * already emitted by ClearContextState above) */
+	const size_t copylen = seqlen - 2;
+	memcpy(cmd, &seq[2], copylen * 4);
+	cmd += copylen;
 
-	cmd += setpersistentregister(
-	    cmd, R_00B858_COMPUTE_STATIC_THREAD_MGMT_SE0, 0xffffffff
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B85C_COMPUTE_STATIC_THREAD_MGMT_SE1, 0xffffffff
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B854_COMPUTE_RESOURCE_LIMITS, 0xffffffff
-	);
-
-	cmd += setcontextregister(
-	    cmd, R_028BE4_PA_SU_VTX_CNTL,
-	    S_028BE4_PIX_CENTER(1) | S_028BE4_ROUND_MODE(GNM_RM_ROUND_TO_EVEN) |
-		S_028BE4_QUANT_MODE(GNM_QM_16_8_FIXED_POINT_1_256TH)
-	);
-	cmd += setcontextregister(cmd, R_028A08_PA_SU_LINE_CNTL, 8);
-	cmd += setcontextregister(
-	    cmd, R_028A00_PA_SU_POINT_SIZE,
-	    S_028A00_HEIGHT(8) | S_028A00_WIDTH(8)
-	);
-	cmd += setcontextregister(
-	    cmd, R_028A04_PA_SU_POINT_MINMAX,
-	    S_028A04_MIN_SIZE(0) | S_028A04_MAX_SIZE(0xffff)
-	);
-	cmd += setcontextregister(cmd, R_028810_PA_CL_CLIP_CNTL, 0);
-	cmd += setcontextregister(
-	    cmd, R_028818_PA_CL_VTE_CNTL,
-	    S_028818_VPORT_X_SCALE_ENA(1) | S_028818_VPORT_X_OFFSET_ENA(1) |
-		S_028818_VPORT_Y_SCALE_ENA(1) | S_028818_VPORT_Y_OFFSET_ENA(1) |
-		S_028818_VPORT_Z_SCALE_ENA(1) | S_028818_VPORT_Z_OFFSET_ENA(1) |
-		S_028818_VTX_W0_FMT(1)
-	);
-	cmd += setcontextregister(
-	    cmd, R_02820C_PA_SC_CLIPRECT_RULE, S_02820C_CLIP_RULE(0xffff)
-	);
-	cmd += setcontextregister(
-	    cmd, R_028C5C_VGT_OUT_DEALLOC_CNTL, S_028C5C_DEALLOC_DIST(16)
-	);
-	cmd += setcontextregister(cmd, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, fui(1.0));
-	cmd += setcontextregister(cmd, R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, fui(1.0));
-	cmd += setcontextregister(cmd, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, fui(1.0));
-	cmd += setcontextregister(cmd, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ, fui(1.0));
-	cmd += setcontextregister(
-	    cmd, R_028808_CB_COLOR_CONTROL,
-	    S_028808_MODE(V_028808_CB_NORMAL) |
-		S_028808_ROP3(V_028808_ROP3_COPY)
-	);
-	cmd += setcontextregister(
-	    cmd, R_028C38_PA_SC_AA_MASK_X0Y0_X1Y0,
-	    S_028C38_AA_MASK_X0Y0(0xffff) | S_028C38_AA_MASK_X1Y0(0xffff)
-	);
-	cmd += setcontextregister(
-	    cmd, R_028C3C_PA_SC_AA_MASK_X0Y1_X1Y1,
-	    S_028C3C_AA_MASK_X0Y1(0xffff) | S_028C3C_AA_MASK_X1Y1(0xffff)
-	);
-
-	cmd[0] = PKT3(PKT3_NUM_INSTANCES, 0, 0);
-	cmd[1] = 1;
-	cmd += 2;
-
-	cmd += setpersistentregister(
-	    cmd, R_00B01C_SPI_SHADER_PGM_RSRC3_PS,
-	    S_00B01C_CU_EN(0x1ff) | S_00B01C_WAVE_LIMIT(0x17)
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B118_SPI_SHADER_PGM_RSRC3_VS,
-	    S_00B118_CU_EN(0x1fd) | S_00B118_WAVE_LIMIT(0x17)
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B21C_SPI_SHADER_PGM_RSRC3_GS,
-	    S_00B21C_CU_EN(0x1ff) | S_00B21C_WAVE_LIMIT(0x17)
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B31C_SPI_SHADER_PGM_RSRC3_ES,
-	    S_00B31C_CU_EN(0x1fd) | S_00B31C_WAVE_LIMIT(0x17)
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, S_00B41C_WAVE_LIMIT(0x17)
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B51C_SPI_SHADER_PGM_RSRC3_LS,
-	    S_00B51C_CU_EN(0x1fd) | S_00B51C_WAVE_LIMIT(0x17)
-	);
-	cmd += setpersistentregister(
-	    cmd, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(0x1c)
-	);
-
-	cmd += setcontextregister(
-	    cmd, R_0286C4_SPI_VS_OUT_CONFIG, S_0286C4_VS_EXPORT_COUNT(1)
-	);
-	cmd += setcontextregister(cmd, R_028404_VGT_MIN_VTX_INDX, 0);
-	cmd += setcontextregister(cmd, R_028400_VGT_MAX_VTX_INDX, 0xffffffff);
-	cmd += setcontextregister(cmd, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX, 0);
-	cmd += setcontextregister(cmd, R_028A10_VGT_OUTPUT_PATH_CNTL, 0);
-	cmd += setcontextregister(cmd, R_028A40_VGT_GS_MODE, 0);
-	cmd += setcontextregister(cmd, R_028AB8_VGT_VTX_CNT_EN, 0);
-	cmd += setcontextregister(cmd, R_028408_VGT_INDX_OFFSET, 0);
-	cmd += setcontextregister(cmd, R_028A48_PA_SC_MODE_CNTL_0, 0);
-	cmd += setcontextregister(
-	    cmd, R_028A4C_PA_SC_MODE_CNTL_1,
-	    S_028A4C_MULTI_SHADER_ENGINE_PRIM_DISCARD_ENABLE(1) |
-		S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
-		S_028A4C_FORCE_EOV_REZ_ENABLE(1)
-	);
-	cmd += setcontextregister(cmd, R_028BE0_PA_SC_AA_CONFIG, 0);
-	cmd += setcontextregister(
-	    cmd, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
-	    S_028B78_POLY_OFFSET_NEG_NUM_DB_BITS(0xe9) |
-		S_028B78_POLY_OFFSET_DB_IS_FLOAT_FMT(1)
-	);
-	cmd += setcontextregister(
-	    cmd, R_028A54_VGT_GS_PER_ES, S_028A54_GS_PER_ES(0x100)
-	);
-	const uint32_t vgtvals[3] = {
-	    S_028A54_GS_PER_ES(256),
-	    S_028A58_ES_PER_GS(256),
-	    S_028A5C_GS_PER_VS(4),
-	};
-	cmd += setcontextregisterrange(
-	    cmd, R_028A54_VGT_GS_PER_ES, vgtvals, uasize(vgtvals)
-	);
-
-	cmd += setusercfg(
-	    cmd, R_030800_GRBM_GFX_INDEX, S_028AA8_PRIMGROUP_SIZE(255)
-	);
-	cmd += setcontextregister(
-	    cmd, R_028AA8_IA_MULTI_VGT_PARAM,
-	    S_030800_SH_BROADCAST_WRITES(1) |
-		S_030800_INSTANCE_BROADCAST_WRITES(1) |
-		S_030800_SE_BROADCAST_WRITES(1)
-	);
-
-	const uint32_t remainingdwords = maxdwords - (cmd - startcmd);
-	if (remainingdwords) {
-		cmd[0] = PKT3(PKT3_NOP, remainingdwords - 2, 0);
-		for (uint32_t i = 1; i < remainingdwords; i += 1) {
+	/* Pad remaining space with NOP */
+	const uint32_t remaining = maxdwords - (uint32_t)(cmd - startcmd);
+	if (remaining >= 2) {
+		cmd[0] = PKT3(PKT3_NOP, remaining - 2, 0);
+		for (uint32_t i = 1; i < remaining; i += 1) {
 			cmd[i] = 0;
 		}
 	}
@@ -1376,23 +1243,71 @@ int32_t PS4_SYSV_ABI sceGnmUpdateVsShader(uint32_t* cmdbuf, uint32_t size,
 
 /* --- Init / default hardware state --- */
 
+/* Helper: build a 256-dword hardware init packet from a firmware sequence */
+static uint32_t build_hwinit_packet(
+    uint32_t* cmdbuf, uint32_t size,
+    const uint32_t* seq, size_t seqlen
+) {
+	if (!cmdbuf || size < HW_INIT_PACKET_SIZE) {
+		return 0;
+	}
+
+	uint32_t* start = cmdbuf;
+
+	/* ClearContextState preamble (12 dwords) */
+	memcpy(cmdbuf, CLEAR_STATE_SEQUENCE, CLEAR_STATE_SEQUENCE_LEN * 4);
+	cmdbuf += CLEAR_STATE_SEQUENCE_LEN;
+
+	/* Copy init sequence, skipping first 2 dwords (CLEAR_STATE
+	 * already emitted by ClearContextState) */
+	const size_t copylen = seqlen - 2;
+	memcpy(cmdbuf, &seq[2], copylen * 4);
+	cmdbuf += copylen;
+
+	/* Pad remaining with NOP */
+	const uint32_t remaining =
+	    HW_INIT_PACKET_SIZE - (uint32_t)(cmdbuf - start);
+	if (remaining >= 2) {
+		cmdbuf[0] = PKT3(PKT3_NOP, remaining - 2, 0);
+		for (uint32_t i = 1; i < remaining; i += 1) {
+			cmdbuf[i] = 0;
+		}
+	}
+
+	return HW_INIT_PACKET_SIZE;
+}
+
 uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState(uint32_t* cmdbuf,
                                                          uint32_t size) {
-	return sceGnmDriverDrawInitDefaultHardwareState350(cmdbuf, size);
+	return build_hwinit_packet(cmdbuf, size, INIT_SEQUENCE, INIT_SEQUENCE_LEN);
 }
 
-uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState175(uint32_t* cmdbuf,
-                                                            uint32_t size) {
-	return sceGnmDriverDrawInitDefaultHardwareState350(cmdbuf, size);
+uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState175(
+    uint32_t* cmdbuf, uint32_t size
+) {
+	return build_hwinit_packet(
+	    cmdbuf, size, INIT_SEQUENCE_175, INIT_SEQUENCE_175_LEN
+	);
 }
 
-uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState200(uint32_t* cmdbuf,
-                                                            uint32_t size) {
-	return sceGnmDriverDrawInitDefaultHardwareState350(cmdbuf, size);
+uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState200(
+    uint32_t* cmdbuf, uint32_t size
+) {
+	const GnmGpuMode gpumode = sceGnmGpuMode();
+	if (gpumode == GNM_GPU_NEO) {
+		return build_hwinit_packet(
+		    cmdbuf, size,
+		    INIT_SEQUENCE_200_NEO, INIT_SEQUENCE_200_NEO_LEN
+		);
+	}
+	return build_hwinit_packet(
+	    cmdbuf, size, INIT_SEQUENCE_200, INIT_SEQUENCE_200_LEN
+	);
 }
 
-uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState350(uint32_t* cmdbuf,
-                                                            uint32_t size) {
+uint32_t PS4_SYSV_ABI sceGnmDrawInitDefaultHardwareState350(
+    uint32_t* cmdbuf, uint32_t size
+) {
 	return sceGnmDriverDrawInitDefaultHardwareState350(cmdbuf, size);
 }
 
@@ -1411,17 +1326,51 @@ uint32_t PS4_SYSV_ABI sceGnmDispatchInitDefaultHardwareState(uint32_t* cmdbuf,
 
 uint32_t PS4_SYSV_ABI sceGnmDrawInitToDefaultContextState(uint32_t* cmdbuf,
                                                           uint32_t size) {
-	if (!cmdbuf || size < 2) {
+	/* FW-captured context init sequence */
+	const uint32_t pktsize = 0x20;
+	if (!cmdbuf || size < pktsize) {
 		return 0;
 	}
-	cmdbuf[0] = PKT3(PKT3_CLEAR_STATE, 0, 0);
-	cmdbuf[1] = 0;
-	return 2;
+	const GnmGpuMode gpumode = sceGnmGpuMode();
+	const uint32_t* seq;
+	size_t seqlen;
+	if (gpumode == GNM_GPU_NEO) {
+		seq = CTX_INIT_SEQUENCE_NEO;
+		seqlen = CTX_INIT_SEQUENCE_NEO_LEN;
+	} else {
+		seq = CTX_INIT_SEQUENCE;
+		seqlen = CTX_INIT_SEQUENCE_LEN;
+	}
+	memcpy(cmdbuf, seq, seqlen * 4);
+	/* Pad remaining with NOPs */
+	for (size_t i = seqlen; i < pktsize; i += 1) {
+		cmdbuf[i] = 0;
+	}
+	return pktsize;
 }
 
 uint32_t PS4_SYSV_ABI sceGnmDrawInitToDefaultContextState400(uint32_t* cmdbuf,
                                                              uint32_t size) {
-	return sceGnmDrawInitToDefaultContextState(cmdbuf, size);
+	const uint32_t pktsize = 0x100;
+	if (!cmdbuf || size < pktsize) {
+		return 0;
+	}
+	const GnmGpuMode gpumode = sceGnmGpuMode();
+	const uint32_t* seq;
+	size_t seqlen;
+	if (gpumode == GNM_GPU_NEO) {
+		seq = CTX_INIT_SEQUENCE_400_NEO;
+		seqlen = CTX_INIT_SEQUENCE_400_NEO_LEN;
+	} else {
+		seq = CTX_INIT_SEQUENCE_400;
+		seqlen = CTX_INIT_SEQUENCE_400_LEN;
+	}
+	memcpy(cmdbuf, seq, seqlen * 4);
+	/* Pad remaining with NOPs */
+	for (size_t i = seqlen; i < pktsize; i += 1) {
+		cmdbuf[i] = 0;
+	}
+	return pktsize;
 }
 
 int PS4_SYSV_ABI sceGnmDrawInitToDefaultContextStateInternalCommand(
