@@ -120,6 +120,26 @@ _Static_assert(sizeof(GnmHsShader) == 0x28, "");
 /* Domain shader (TES) uses GnmVsShader since it outputs vertices.
  * The GnmShaderBinaryType field distinguishes DS_VS from VS_VS. */
 
+typedef struct {
+	GnmShaderCommonData common;
+	GnmEsStageRegisters registers;
+
+	uint8_t numinputsemantics;
+	uint8_t numexportsemantics;
+	uint8_t _unused[2];
+} GnmEsShader;
+_Static_assert(sizeof(GnmEsShader) == 0x1c, "");
+
+typedef struct {
+	GnmShaderCommonData common;
+	GnmLsStageRegisters registers;
+
+	uint8_t numinputsemantics;
+	uint8_t numexportsemantics;
+	uint8_t _unused[2];
+} GnmLsShader;
+_Static_assert(sizeof(GnmLsShader) == 0x1c, "");
+
 typedef enum {
 	GNM_SHB_PS = 0,
 	GNM_SHB_VS_VS = 1,
