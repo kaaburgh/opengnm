@@ -22,7 +22,9 @@ against opengnm unmodified.
 - **PM4 encoding** — command buffer packet building
 - **Opt-in freegnm source compatibility** — `<compat/freegnm.h>` and
   `<gnm/...>` forwarding headers map compatible `gnm*` / `gpa*` wrapper calls to
-  `sceGnm*` without exporting a second ABI
+  `sceGnm*` without exporting a second ABI. PSSL and GNF tooling types are
+  provided via `<compat/pssl.h>` and `<compat/gnf.h>` with `<gnm/pssl/types.h>`
+  and `<gnm/gnf/gnf.h>` forwarding headers.
 
 ## Status
 

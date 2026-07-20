@@ -14,9 +14,9 @@ PLATFORM=orbis
 
 TOOLCHAIN=$(OO_PS4_TOOLCHAIN)
 
-AR=ar
-CC=clang
-LD=ld.lld
+AR?=ar
+CC?=clang
+LD?=ld.lld
 CFLAGS=-std=c11 -Wall -Wextra -Wpedantic -I./include -I./src -O2 -g \
     --target=x86_64-ps4-elf -fPIC \
     -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include

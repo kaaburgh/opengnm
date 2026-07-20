@@ -809,7 +809,7 @@ semantic expectations in one failure message.
 7. **Phase 5C (DONE)** — Hardware hardening package matrix: submit/EOP, triangle, composite blit, composite DMA, renderer-draw wrapper, repeated launch stability, and crash logs.
 8. **TODO cleanup (DONE)** — All 18 TODO/FIXME comments resolved across 10 source files. Zero TODO/FIXME remaining.
 9. **RPCSX cross-audit (NEXT)** — Compare PM4/EOP/DMA/wait/default-state/tiling behavior against RPCSX and shadPS4 side by side.
-10. **Downstream migration (STARTED)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present; `triangle`, `eden-composite-blit`, `eden-composite-dma`, and `eden-triangle-wrapper` link with opengnm; migrate unsupported tool-layer includes next.
+10. **Downstream migration (DONE)** — Source-only `gnm*`/`gpa*` aliases and core `<gnm/...>` forwarding headers are present. PSSL and GNF tooling headers extracted into opengnm compat layer. All freegnm-examples (triangle, cube, shader-test, eden-composite-blit, eden-composite-dma, eden-triangle-wrapper, gltf, indirect, instances) build with `USE_OPENGNM=1`.
 
 After Phase 4, opengnm builds on both PS4 (orbis) and host (generic).
 After Phase 5A, host behavior is regression-tested (88 tests). After Phase 5B, the
