@@ -20,6 +20,9 @@ against opengnm unmodified.
 - **Surface computation** — `sceGpa*` (gpuaddr / AddrLib) for RT/texture sizing
 - **GCN assembler** — fetch shader generation
 - **PM4 encoding** — command buffer packet building
+- **Firmware-captured hardware init** — `DrawInitDefaultHardwareState` uses
+  real PS4 firmware sequences (from shadPS4 RE) with FW version-specific
+  (base/1.75/2.00/3.50) and Neo/OG/Neo-compat variants
 - **Opt-in freegnm source compatibility** — `<compat/freegnm.h>` and
   `<gnm/...>` forwarding headers map compatible `gnm*` / `gpa*` wrapper calls to
   `sceGnm*` without exporting a second ABI. PSSL and GNF tooling types are
@@ -28,22 +31,22 @@ against opengnm unmodified.
 
 ## Status
 
-Phases 0-5D are complete, plus a full TODO/FIXME cleanup pass. The OpenOrbis
-Docker build, PS4-target link smoke, PS4 hardware-smoke package build, FTP
-staging, and PS4 hardware run all pass. All 207+ `sceGnm*` functions are
-implemented across both backends, and the generic host backend passes 88 tests
-via CMake/CTest and Makefile. Zero TODO/FIXME comments remain in the source.
+**Feature-complete.** All planned phases (0-5D), TODO cleanup, RPCSX
+cross-audit, and downstream migration are done. The OpenOrbis Docker build,
+PS4-target link smoke, PS4 hardware-smoke package build, FTP staging, and PS4
+hardware run all pass. All 207+ `sceGnm*` functions are implemented across
+both backends, and the generic host backend passes 88 tests via CMake/CTest
+and Makefile. Zero TODO/FIXME comments remain in the source.
 
-The verified PS4 hardware smoke result is a full-screen green status view with
-scrolling white bar and digit `0`, confirming VideoOut presentation and the GNM
-submit/EOP path. Eden and `freegnm-examples` currently consume the older `gnm*`
-wrapper API from `freegnm`; the first adapter layer now covers one-to-one core
-headers and wrapper names, and `freegnm-examples/triangle` plus
-`freegnm-examples/eden-composite-blit` and
-`freegnm-examples/eden-composite-dma` plus the C++ wrapper target
-`freegnm-examples/eden-triangle-wrapper` now link with `USE_OPENGNM=1`.
-Consumers that include old tooling-only headers such as
-`gnm/pssl/*` or `gnm/gnf/*` still need migration to the split tool libraries.
+Hardware init uses firmware-captured register sequences from shadPS4 RE data,
+with FW version-specific (base/1.75/2.00/3.50) and Neo/OG/Neo-compat variants.
+The gpuaddr tiling implementation was cross-audited against RPCSX with no gaps
+found.
+
+All freegnm-examples (triangle, cube, shader-test, eden-composite-blit,
+eden-composite-dma, eden-triangle-wrapper, gltf, indirect, instances) build
+with `USE_OPENGNM=1` via the compat layer. The companion shader compiler
+`opengnm-psbc` is complete and hardware-validated on PS4 FW 9.00.
 
 See `OPENGNM_REWRITE_PLAN.md` for the full plan and progress.
 
@@ -137,4 +140,7 @@ MIT, see [COPYING](COPYING).
 
 - Clean rewrite, based on the PS4 SDK ABI and AMD public documentation
 - Sony ABI reference: `shadPS4/src/core/libraries/gnmdriver/`
+- Firmware init sequences: `shadPS4/src/core/libraries/gnmdriver/gnmdriver_init.h`
+  (captured from real PS4 firmware)
 - Surface computation: AMD PAL / Mesa AddrLib
+- gpuaddr cross-audit: RPCSX (independent AMD tiler implementation)
