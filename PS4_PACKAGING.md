@@ -155,7 +155,7 @@ PS4_HOST=10.0.1.157
 PS4_FTP_PORT=2121
 PS4_PKG_DIR=/data/pkg
 PS4DEBUG_HOST=10.0.1.157
-PS4DEBUG_PYTHON=/Users/bizkut/Downloads/PS5/homebrew/PyPS4debug/.venv/bin/python
+PS4DEBUG_PYTHON=<PyPS4debug-venv>/bin/python
 ```
 
 Existing staging scripts use FTP to upload packages to `/data/pkg` and
@@ -172,7 +172,7 @@ Host-side:
     `../tools/setup_openorbis_llvm18_macos.sh`
   - SDK macOS helpers:
     `bin/macos/create-fself-macos`, `bin/macos/create-gp4`, `bin/macos/PkgTool.Core`
-- Repository root: `/Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm`
+- Repository root: `<opengnm-stack-root>`
 - OpenOrbis helper source directories, if the Docker image does not provide
   compatible helper binaries:
   - `../OpenOrbis/create-fself`
@@ -352,7 +352,7 @@ avoid platform ambiguity.
 The native wrapper avoids Docker and Ubuntu package setup:
 
 ```sh
-cd /Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm/opengnm
+cd <opengnm-root>
 ./build.sh macos-hardware-pkg
 ```
 
@@ -380,7 +380,7 @@ RUNTIME_MODULE_DIR=/path/to/sce_module_prx_dir
 Upload by FTP:
 
 ```sh
-ROOT_DIR=/Users/bizkut/Downloads/PS5/homebrew/ps4-freegnm
+ROOT_DIR=<opengnm-stack-root>
 PKG="$ROOT_DIR/opengnm/IV0000-OGNM00001_00-OPENGNMHWSMOKE00.pkg"
 PS4_HOST="${PS4_HOST:-10.0.1.157}"
 PS4_FTP_PORT="${PS4_FTP_PORT:-2121}"
@@ -397,7 +397,7 @@ curl --fail --silent --show-error \
 Optionally notify through PS4debug:
 
 ```sh
-PS4DEBUG_PYTHON=/Users/bizkut/Downloads/PS5/homebrew/PyPS4debug/.venv/bin/python
+PS4DEBUG_PYTHON=<PyPS4debug-venv>/bin/python
 
 "$PS4DEBUG_PYTHON" - "$PS4_HOST" "$PS4_PKG_DIR/$(basename "$PKG")" <<'PY'
 import asyncio

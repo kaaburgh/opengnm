@@ -6,7 +6,7 @@
 > OpenOrbis on PS4, with a generic host backend for testing.
 >
 > **Sony ABI reference:** `shadPS4/src/core/libraries/gnmdriver/` (207 `sceGnm*` decls).
-> **Firmware modules:** `/Users/bizkut/Downloads/PS4/FIRMWARES/9.00/` (decrypted ELFs).
+> **Firmware modules:** `<firmware-dir>/` (decrypted ELFs).
 > **RE documentation:** `tools/gnm_driver_fw900_analysis.md`, `tools/gnm_pm4_shader_analysis.md`,
 > `tools/gnm_compositor_analysis.md`.
 
@@ -67,7 +67,7 @@ alone.
 
 **Firmware module dumps (FW 9.00, already decrypted ELFs):**
 ```
-/Users/bizkut/Downloads/PS4/FIRMWARES/9.00/
+<firmware-dir>/
 ├── kernel.bin                                    # PS4 kernel (42MB)
 ├── modules/system/common/lib/
 │   ├── libSceGnmDriver.sprx                      # GNM driver (96KB) — PRIMARY RE TARGET
@@ -120,7 +120,7 @@ alone.
 - **GoldHEN v2.4b18** — kernel access for FW 9.00
 
 **IDA Pro plugins (for automated NID resolution and module loading):**
-- **ps4_module_loader** at `/Users/bizkut/Downloads/PS5/homebrew/ps4_module_loader/` —
+- **ps4_module_loader** at `<ps4_module_loader-dir>/` —
   IDA loader plugin (Python, 2054 lines) for PS4 module files (.prx, .sprx, .elf, .self).
   Parses PS4-specific ELF types (`ET_SCE_DYNEXEC`, `ET_SCE_DYNAMIC`,
   `PT_SCE_DYNLIBDATA`), all PS4 dynamic tags (`DT_SCE_EXPORT_LIB` = `0x61000013`,
@@ -128,15 +128,15 @@ alone.
   (97,623 entries), sets up IDA segments/imports/exports/function names automatically.
   Includes `ps4_errno_700.til` (PS4 error code type library). Install: copy
   `ps4_module.py` + `aerolib.csv` into IDA loaders directory.
-- **ps4_nid_resolver_ida** at `/Users/bizkut/Downloads/PS5/homebrew/ps4_nid_resolver_ida/` —
+- **ps4_nid_resolver_ida** at `<ps4_nid_resolver_ida-dir>/` —
   IDA plugin (C++) that resolves PS4 NIDs to function names using ps4libdoc JSON
   files. Parses PS4 dynamic tags (`0x61000035` = string table, `0x61000039` = symbol
   table, `0x61000029` = PLT reloc table), looks up each NID in ps4libdoc, renames
   functions in IDA. Use: `Ctrl+F10` to resolve, `Ctrl+Alt+F10` for settings.
-- **aerolib.csv** at `/Users/bizkut/Downloads/PS5/homebrew/OrbisNet/aerolib.csv` (also
+- **aerolib.csv** at `<aerolib.csv-path>` (also
   in `ps4_module_loader/aerolib.csv`) — 97,623 NID→symbol mappings. Format:
   `NID symbol_name` (space-delimited, one per line). Covers 219 `sceGnm*` NIDs.
-- **ps4libdoc** at `/Users/bizkut/Downloads/PS5/homebrew/OpenOrbis/ps4libdoc/known_names.txt` —
+- **ps4libdoc** at `<ps4libdoc-path>` —
   219 known `sceGnm*` NIDs for cross-referencing.
 
 **NID generation (reference):**
@@ -154,7 +154,7 @@ alone.
 - System modules keyset revisions per firmware version (FW 9.00 = keyset 5.0)
 - SAMU keys, PFS keys, portability EncDec keys, kernel keys
 - Not directly needed for opengnm (we work with already-decrypted ELFs at
-  `/Users/bizkut/Downloads/PS4/FIRMWARES/9.00/`), but useful reference for
+  `<firmware-dir>/`), but useful reference for
   understanding PS4 module encryption if working with encrypted SELF files.
 
 ### RE Deliverables
@@ -259,18 +259,18 @@ The RE phase produces verified documentation that Phases 2-6 implement against:
 
 ```bash
 # Load libSceGnmDriver.sprx into radare2 with symbols
-r2 -q -c '. /Users/bizkut/Downloads/PS4/FIRMWARES/9.00/modules/system/common/lib/libSceGnmDriver.sprx.r2.txt' \
-     /Users/bizkut/Downloads/PS4/FIRMWARES/9.00/modules/system/common/lib/libSceGnmDriver.sprx
+r2 -q -c '. <firmware-dir>/modules/system/common/lib/libSceGnmDriver.sprx.r2.txt' \
+     <firmware-dir>/modules/system/common/lib/libSceGnmDriver.sprx
 
 # Find function by NID (example: sceGnmSdmaOpen)
 # Look up NID in aerolib.csv, then find export vaddr in .exports.txt
-grep sceGnmSdmaOpen /Users/bizkut/Downloads/PS4/FIRMWARES/9.00/modules/system/common/lib/libSceGnmDriver.sprx.exports.txt
+grep sceGnmSdmaOpen <firmware-dir>/modules/system/common/lib/libSceGnmDriver.sprx.exports.txt
 
 # Disassemble at the found vaddr
 # r2: pdf @ <vaddr>
 
 # Cross-reference with shadPS4
-grep -rn "sceGnmSdma" /Users/bizkut/Downloads/PS5/homebrew/shadPS4/src/
+grep -rn "sceGnmSdma" <shadPS4-dir>/src/
 ```
 
 ---

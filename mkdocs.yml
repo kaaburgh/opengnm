@@ -1,11 +1,11 @@
 site_name: opengnm
-site_url: https://bizkut.github.io/OpenGNM/
+site_url: https://ps4-opengnm.github.io/opengnm/
 site_description: >-
   Clean-rewrite PS4 GNM library — sceGnm* / sceGpa* drop-in API compatibility
   with the Sony official PS4 SDK. Full reference for 207+ functions.
 site_author: opengnm contributors
-repo_name: bizkut/OpenGNM
-repo_url: https://github.com/bizkut/OpenGNM
+repo_name: PS4-OpenGNM/opengnm
+repo_url: https://github.com/PS4-OpenGNM/opengnm
 edit_uri: edit/main/docs/
 
 docs_dir: docs
@@ -56,7 +56,7 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/bizkut/OpenGNM
+      link: https://github.com/PS4-OpenGNM/opengnm
   version:
     provider: mike
 
