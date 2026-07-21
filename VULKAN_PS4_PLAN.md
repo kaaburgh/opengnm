@@ -478,6 +478,13 @@ vulkan-ps4/
       GPU-accelerated video output
 - [x] **Phase 3**: `vkGetPhysicalDeviceProperties` reports
       `VK_API_VERSION_1_0`
+- [x] **Phase 3**: GNM device lifecycle (init/teardown) wired into
+      `vkCreateDevice`/`vkDestroyDevice`
+- [x] **Phase 3**: EOP-based fence/semaphore sync (GPU label polling)
+- [x] **Phase 3**: RT-as-texture descriptor support
+- [x] **Phase 3**: `CmdBeginRenderPass2` / `CmdEndRenderPass2` (Vulkan 1.2)
+- [x] **Phase 3**: `CmdUpdateBuffer` staging via `sceGnmCmdAllocInside`
+- [x] **Phase 3**: `WaitUntilSafeForRendering` on swapchain render passes
 - [ ] **Phase 3**: `test_tessellation.self` renders with tessellation
       active
 - [ ] **Phase 5**: Vulkan-ValidationLayers pass on all test cases
@@ -544,18 +551,32 @@ vulkan-ps4/
 
 ## Status
 
-**Phase 0-3: Complete.** The vulkan-ps4 ICD implements 144 Vulkan entry
-points (3 stubs for optional Vulkan 1.2 features: `CmdBeginRenderPass2`,
-`CmdEndRenderPass2`, `QueueBindSparse`). All Phase 1-3 steps are
+**Phase 0-3: Complete.** The vulkan-ps4 ICD implements 146 Vulkan entry
+points across 19 source files (~7,500 lines of C). All Phase 1-3 steps are
 implemented: instance, device, memory, buffers, images, command buffers,
 render passes, pipelines (including tessellation and geometry shaders),
 descriptor sets, fetch shaders, swapchain, queue submit, sync primitives,
 query pools, clear commands, depth/stencil, MRT, dynamic state, events,
 indirect draws, and compute pipelines.
 
+**Phase 3 additions (2026-07-21):**
+- GNM device lifecycle: `sceGnmCmdInit` + `InitDefaultHardwareState` on
+  `vkCreateDevice`; `sceGnmSubmitDone` on `vkDestroyDevice`
+- EOP-based fence/semaphore sync: GPU label memory + `CACHE_FLUSH_AND_INV_TS_EVENT`
+  EOP writes instead of CPU bools
+- RT-as-texture: `CreateImageView` builds `GnmTexture` from `GnmRenderTarget`
+  via `sceGnmRtBuildInfo` + `sceGnmTexCreate2d`
+- Vulkan 1.2 render pass 2: `CmdBeginRenderPass2` / `CmdNextSubpass2` /
+  `CmdEndRenderPass2` + `VK_KHR_create_renderpass2` extension
+- `CmdUpdateBuffer` staging via `sceGnmCmdAllocInside` (semantically correct)
+- `WaitUntilSafeForRendering` on swapchain image render passes
+- Depth/array layer iteration in all image copy commands
+- Bug fixes: RT width/height, slice offset calculation, host fence spin,
+  fence `signaled` flag on host
+
 **Builds:**
-- Host (generic): `cmake --build build` — clean, zero warnings
-- PS4 (orbis): `make -f Makefile.orbis` — produces `libvulkan_ps4.so`
+- Host (generic): `cmake --build build` — clean, all 3 tests pass
+- PS4 (orbis): `make -f Makefile.orbis` — produces `libvulkan_ps4.so` (~59MB)
   and `libvulkan_ps4.a` (ELF 64-bit FreeBSD/PS4)
 
 **Tests:** 3/3 test suites pass (format, triangle, descriptor), 82/82
@@ -566,6 +587,9 @@ format tests pass.
 - RetroArch link smoke test on PS4
 - Phase 4: Optional extensions (on demand)
 - Phase 5: Vulkan-ValidationLayers conformance
+- Tiled RT clear pixel shader binary (deferred — needs embedded GCN PS)
+- GPU WaitMem for wait semaphores (currently CPU-side `signaled` flag)
+- Texel buffer views (`VkCreateBufferView` + `GnmBuffer` descriptor)
 
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
