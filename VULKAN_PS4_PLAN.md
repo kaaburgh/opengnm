@@ -588,9 +588,13 @@ format tests pass.
 - Phase 4: Optional extensions (on demand)
 - Phase 5: Vulkan-ValidationLayers conformance
 - CmdClearColorImage for tiled RTs (needs RT binding before draw-based clear)
+- Pre-existing pipeline bug: vk_ps4_pipeline.c does not call
+  sceGnmPsRegsSetAddress after extracting PS registers, so
+  spishaderpgmlops contains a file offset not a GPU address (affects
+  all user PS shaders on PS4 hardware; host unaffected)
 - GPU WaitMem for wait semaphores: DONE
 - Texel buffer views: DONE
-- Tiled RT clear pixel shader: DONE (render pass clears only)
+- Tiled RT clear pixel shader: DONE (render pass clears only, 6 bugs fixed)
 
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
