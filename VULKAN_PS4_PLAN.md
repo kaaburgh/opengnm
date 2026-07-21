@@ -587,9 +587,10 @@ format tests pass.
 - RetroArch link smoke test on PS4
 - Phase 4: Optional extensions (on demand)
 - Phase 5: Vulkan-ValidationLayers conformance
-- Tiled RT clear pixel shader binary (deferred — needs embedded GCN PS)
-- GPU WaitMem for wait semaphores (currently CPU-side `signaled` flag)
-- Texel buffer views (`VkCreateBufferView` + `GnmBuffer` descriptor)
+- CmdClearColorImage for tiled RTs (needs RT binding before draw-based clear)
+- GPU WaitMem for wait semaphores: DONE
+- Texel buffer views: DONE
+- Tiled RT clear pixel shader: DONE (render pass clears only)
 
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
