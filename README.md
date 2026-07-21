@@ -134,7 +134,7 @@ bgfx:
 
 ## License
 
-MIT, see [COPYING](COPYING).
+MIT, see [LICENSE](LICENSE).
 
 ## Sources
 
