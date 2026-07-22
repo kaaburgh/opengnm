@@ -566,7 +566,13 @@ indirect draws, and compute pipelines.
   for maxMemoryAllocationCount, maxViewportDimensions, maxFramebuffer*,
   maxColorAttachments, maxSamplerAllocationCount
 - Fixed by populating limits with PS4 Liverpool GPU capabilities
-- 4/4 tests pass (format, triangle, descriptor, validation)
+- Expanded test to exercise full rendering pipeline: render pass +
+  framebuffer, graphics pipeline with real SPIR-V shaders, dynamic
+  viewport/scissor, descriptor sets (UBO + combined image sampler),
+  image layout transitions (UNDEFINED → TRANSFER_DST → COLOR_ATTACHMENT),
+  CmdCopyBufferToImage, pipeline barriers, render pass begin/clear/draw/end,
+  fence-based queue submit + wait
+- 4/4 tests pass (format, triangle, descriptor, validation) with 0 VVL errors
 
 **Phase 3 additions (2026-07-21):**
 - GNM device lifecycle: `sceGnmCmdInit` + `InitDefaultHardwareState` on
@@ -595,15 +601,15 @@ indirect draws, and compute pipelines.
 - PS4 hardware testing (test_triangle.self on PS4)
 - RetroArch link smoke test on PS4
 - Phase 4: Optional extensions (on demand)
-- Phase 5: Expand VVL test coverage (render pass draws, pipeline binding,
-  descriptor set updates, image layout transitions, barriers)
+- Phase 5: Expand VVL test coverage (compute pipelines, multi-subpass,
+  depth/stencil attachment, indexed draws, indirect draws)
 - CmdClearColorImage for tiled RTs (needs RT binding before draw-based clear)
 - GPU WaitMem for wait semaphores: DONE
 - Texel buffer views: DONE
 - Tiled RT clear pixel shader: DONE (render pass clears only, 6 bugs fixed)
 - Pipeline shader binary use-after-free + address patching: DONE (all stages)
 - VkPhysicalDeviceLimits populated: DONE
-- VVL test infrastructure: DONE (4/4 tests pass with zero errors)
+- VVL test infrastructure: DONE (4/4 tests pass, 0 errors, full pipeline)
 
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
