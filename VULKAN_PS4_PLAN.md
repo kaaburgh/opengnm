@@ -559,6 +559,15 @@ descriptor sets, fetch shaders, swapchain, queue submit, sync primitives,
 query pools, clear commands, depth/stencil, MRT, dynamic state, events,
 indirect draws, and compute pipelines.
 
+**Phase 5 (2026-07-21): VVL testing started.**
+- Added validation_test that goes through the Vulkan loader with
+  VK_LAYER_KHRONOS_validation enabled
+- VVL found VkPhysicalDeviceLimits was entirely zeroed, causing errors
+  for maxMemoryAllocationCount, maxViewportDimensions, maxFramebuffer*,
+  maxColorAttachments, maxSamplerAllocationCount
+- Fixed by populating limits with PS4 Liverpool GPU capabilities
+- 4/4 tests pass (format, triangle, descriptor, validation)
+
 **Phase 3 additions (2026-07-21):**
 - GNM device lifecycle: `sceGnmCmdInit` + `InitDefaultHardwareState` on
   `vkCreateDevice`; `sceGnmSubmitDone` on `vkDestroyDevice`
@@ -575,23 +584,26 @@ indirect draws, and compute pipelines.
   fence `signaled` flag on host
 
 **Builds:**
-- Host (generic): `cmake --build build` — clean, all 3 tests pass
+- Host (generic): `cmake --build build` — clean, all 4 tests pass
 - PS4 (orbis): `make -f Makefile.orbis` — produces `libvulkan_ps4.so` (~59MB)
   and `libvulkan_ps4.a` (ELF 64-bit FreeBSD/PS4)
 
-**Tests:** 3/3 test suites pass (format, triangle, descriptor), 82/82
-format tests pass.
+**Tests:** 4/4 test suites pass (format, triangle, descriptor, validation),
+82/82 format tests pass.  Validation test runs VVL with zero errors.
 
 **Remaining work:**
 - PS4 hardware testing (test_triangle.self on PS4)
 - RetroArch link smoke test on PS4
 - Phase 4: Optional extensions (on demand)
-- Phase 5: Vulkan-ValidationLayers conformance
+- Phase 5: Expand VVL test coverage (render pass draws, pipeline binding,
+  descriptor set updates, image layout transitions, barriers)
 - CmdClearColorImage for tiled RTs (needs RT binding before draw-based clear)
 - GPU WaitMem for wait semaphores: DONE
 - Texel buffer views: DONE
 - Tiled RT clear pixel shader: DONE (render pass clears only, 6 bugs fixed)
 - Pipeline shader binary use-after-free + address patching: DONE (all stages)
+- VkPhysicalDeviceLimits populated: DONE
+- VVL test infrastructure: DONE (4/4 tests pass with zero errors)
 
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
