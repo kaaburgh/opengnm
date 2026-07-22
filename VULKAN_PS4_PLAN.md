@@ -559,7 +559,7 @@ descriptor sets, fetch shaders, swapchain, queue submit, sync primitives,
 query pools, clear commands, depth/stencil, MRT, dynamic state, events,
 indirect draws, and compute pipelines.
 
-**Phase 5 (2026-07-21): VVL testing started.**
+**Phase 5 (2026-07-22): VVL testing + code review fixes.**
 - Added validation_test that goes through the Vulkan loader with
   VK_LAYER_KHRONOS_validation enabled
 - VVL found VkPhysicalDeviceLimits was entirely zeroed, causing errors
@@ -572,6 +572,17 @@ indirect draws, and compute pipelines.
   image layout transitions (UNDEFINED → TRANSFER_DST → COLOR_ATTACHMENT),
   CmdCopyBufferToImage, pipeline barriers, render pass begin/clear/draw/end,
   fence-based queue submit + wait
+- Code review found and fixed 11 additional missing VkPhysicalDeviceLimits
+  fields (maxSampleMaskWords, timestampComputeAndGraphics, timestampPeriod,
+  maxClipDistances, maxCullDistances, discreteQueuePriorities, pointSizeRange,
+  lineWidthRange, pointSizeGranularity, lineWidthGranularity, strictLines)
+- Fixed vk_icdEnumerateInstanceExtensionProperties spec violation:
+  *pPropertyCount must report written count, not total, on partial writes
+- Fixed GetPhysicalDeviceImageFormatProperties sampleCounts to match limits
+- Fixed CMake orbis build missing ORBIS/__ORBIS__/__PS4__ defines
+- Fixed ICD manifest: cross-platform library path, is_portability_driver
+- Fixed test bugs: cleanup ordering, image layout mismatch, buffer barrier
+  access masks, debug messenger leak on error path
 - 4/4 tests pass (format, triangle, descriptor, validation) with 0 VVL errors
 
 **Phase 3 additions (2026-07-21):**
@@ -608,8 +619,10 @@ indirect draws, and compute pipelines.
 - Texel buffer views: DONE
 - Tiled RT clear pixel shader: DONE (render pass clears only, 6 bugs fixed)
 - Pipeline shader binary use-after-free + address patching: DONE (all stages)
-- VkPhysicalDeviceLimits populated: DONE
+- VkPhysicalDeviceLimits populated: DONE (all required fields, spec-compliant)
 - VVL test infrastructure: DONE (4/4 tests pass, 0 errors, full pipeline)
+- ICD loader interface: fixed pPropertyCount, pLayerName handling
+- ICD manifest: cross-platform, is_portability_driver
 
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
