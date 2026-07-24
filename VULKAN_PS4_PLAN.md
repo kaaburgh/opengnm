@@ -439,6 +439,13 @@ without rewrites.
     - Separate graphics and compute queues (GNM supports compute queues
       via `sceGnmMapComputeQueue`)
     - `vkGetPhysicalDeviceQueueFamilyProperties` reports 2 families
+    - DONE: Family 0 = graphics+compute+transfer, Family 1 = compute+transfer
+      (async compute via ACE).  CreateDevice accepts both families.
+      GetDeviceQueue/GetDeviceQueue2 retrieve queues from either family.
+      VkPs4Queue stores family_index + flags.  On host builds the compute
+      queue submits through the same sceGnmSubmitCommandBuffers path.
+      VVL test 17f exercises 2-family device creation, queue retrieval,
+      and GetDeviceQueue2.
 
 ## Files to Create
 
