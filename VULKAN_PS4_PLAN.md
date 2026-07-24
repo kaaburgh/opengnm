@@ -360,25 +360,33 @@ These are not required for Vulkan 1.0 conformance or RetroArch. Implement
 only when an app needs them. The architecture supports adding them
 without rewrites.
 
+**Implemented (DONE, VVL-tested):**
+- `VK_KHR_driver_properties` (Vulkan 1.2) — DONE: reports driverName
+  "vulkan-ps4", driverInfo "OpenGNM Vulkan ICD", driverID
+  VK_DRIVER_ID_MESA_RADV, conformanceVersion 1.1.0.0
+- `VK_KHR_imageless_framebuffer` (Vulkan 1.2) — DONE: imageless
+  framebuffers with VkRenderPassAttachmentBeginInfo at beginRenderPass
+- `VK_EXT_descriptor_indexing` (Vulkan 1.2) — DONE: bindless, variable
+  descriptor count, update-after-bind, partially-bound, runtime arrays
+- `VK_KHR_timeline_semaphore` (Vulkan 1.2) — DONE: software-emulated
+  64-bit counter, GetSemaphoreCounterValue/Signal/Wait
+- `VK_KHR_image_format_list` (Vulkan 1.2) — DONE: dependency for
+  imageless_framebuffer
 - `VK_KHR_swapchain` (required for WSI, already in Phase 1)
+
+**Not yet implemented:**
 - `VK_KHR_surface` / `VK_KHR_display` (PS4 has no window system —
   swapchain is the display)
-- `VK_EXT_descriptor_indexing` (Vulkan 1.2) — bindless, GNM supports
-  natively
-- `VK_KHR_timeline_semaphore` (Vulkan 1.2) — software-emulated
 - `VK_KHR_buffer_device_address` (Vulkan 1.2) — GNM uses 64-bit
   addresses already
 - `VK_KHR_shader_atomic_int64` (Vulkan 1.2) — GCN hardware atomics
 - `VK_KHR_shader_subgroup_extended_types` (Vulkan 1.2) — GCN DPP/SWIZZLE
-- `VK_KHR_imageless_framebuffer` (Vulkan 1.2) — software
 - `VK_EXT_scalar_block_layout` (Vulkan 1.2) — adjust UBO/SSBO layout
 - `VK_KHR_uniform_buffer_standard_layout` (Vulkan 1.2)
 - `VK_KHR_vulkan_memory_model` (Vulkan 1.2) — barrier emission
 - `VK_KHR_spirv_1_4` (Vulkan 1.2) — opengnm-psbc handles via Mesa NIR
 - `VK_KHR_create_renderpass2` (Vulkan 1.2) — wrapper over render pass
 - `VK_KHR_depth_stencil_resolve` (Vulkan 1.2)
-- `VK_KHR_driver_properties` (Vulkan 1.2) — report driver info
-- `VK_KHR_image_format_list` (Vulkan 1.2)
 - `VK_EXT_host_query_reset` (Vulkan 1.2)
 - `VK_EXT_separate_stencil_usage` (Vulkan 1.2)
 
@@ -559,7 +567,168 @@ descriptor sets, fetch shaders, swapchain, queue submit, sync primitives,
 query pools, clear commands, depth/stencil, MRT, dynamic state, events,
 indirect draws, and compute pipelines.
 
-**Phase 5 (2026-07-22): VVL testing + code review fixes.**
+**Phase 5 (2026-07-23): Code review bug fixes + swapchain/fence sync.**
+- Fixed 8 critical bugs from code review:
+  - Render pass shallow copy use-after-free → deep copy all subpass arrays
+  - CmdDispatchIndirect silent skip on >32-bit GPU addr → staging via
+    sceGnmCmdAllocInside
+  - CmdClearColorImage using FillMemory for tiled RTs → draw-based clear
+  - CmdPushConstants was a no-op → implemented via SET_SH_REG PM4 packets
+    with psbc emitting IMM_ALUFLOATCONST input usage slots for inline push
+    constants and VS base_vertex/start_instance
+  - CmdDrawIndexed ignored vertexOffset/firstInstance → emit SET_SH_REG
+    before draw to VS user-data registers (psbc reserves base_vertex/
+    start_instance slots with apislot 0xFE/0xFF)
+  - CmdDraw firstVertex/firstInstance → same SET_SH_REG mechanism
+  - CmdBindDescriptorSets ignored firstSet → track actual Vulkan set
+    index (firstSet + si) in dynamic offset map and binding search
+  - GCN user-data registers are sticky → always write base_vertex/
+    start_instance registers when pipeline uses them, even when value is 0
+- Swapchain synchronization improvements:
+  - Replaced MVP round-robin with per-image in-flight tracking
+    (image_in_flight[] + image_fences[] in VkPs4Swapchain)
+  - AcquireNextImageKHR searches for available images, waits on fences
+    when all in-flight, supports semaphore-only sync (NULL fence)
+  - QueuePresentKHR clears in-flight tracking after flip completes
+  - AcquireNextImageKHR no longer touches signal_value/label (avoids
+    double-increment when fence/semaphore reused with QueueSubmit)
+- Fence timeout: WaitForFences now honors timeout parameter using
+  clock_gettime(CLOCK_MONOTONIC), returns VK_TIMEOUT on deadline expiry,
+  uses tiered yield (tight spin → 1µs sleeps) instead of infinite spin
+- PS4 portability: sceKernelUsleep for Orbis, nanosleep for host,
+  orbis/libkernel.h include path
+- 4/4 tests pass (format, triangle, descriptor, validation)
+
+**Phase 5 (2026-07-24): Vulkan 1.1 upgrade.**
+- Upgraded API version from 1.0.0 to 1.1.0 (internal.h, icd.json, CMakeLists.txt)
+- New file `vk_ps4_vulkan11.c` with all Vulkan 1.1 core functions:
+  - `vkEnumerateInstanceVersion` → returns 1.1.0
+  - `vkEnumeratePhysicalDeviceGroups` → 1 group, 1 device
+  - `vkGetPhysicalDeviceProperties2` / `Features2` / `FormatProperties2` /
+    `ImageFormatProperties2` — thin wrappers over v1 + pNext chain handling
+    for Vulkan11Properties/Features, SubgroupProperties, Maintenance3Properties,
+    PointClippingProperties, MultiviewProperties, ProtectedMemoryProperties,
+    16BitStorageFeatures, VariablePointersFeatures, SamplerYcbcrConversionFeatures,
+    ShaderDrawParametersFeatures
+  - `vkGetPhysicalDeviceExternalBufferProperties` / `ExternalFenceProperties` /
+    `ExternalSemaphoreProperties` — no external handle support (PS4).  Only
+    the feature/handle-type fields are zeroed, not `sType`/`pNext`.
+  - `vkGetPhysicalDeviceMemoryProperties2` / `SparseImageFormatProperties2` —
+    thin wrapper / no sparse support (returns 0 properties)
+  - `vkGetDeviceQueue2` — delegates to GetDeviceQueue
+  - `vkBindBufferMemory2` / `BindImageMemory2` — loop over v1 functions
+  - `vkGetDeviceGroupPeerMemoryFeatures` — 0 (single GPU)
+  - `vkGetDescriptorSetLayoutSupport` — supported=TRUE
+  - `vkCreateDescriptorUpdateTemplate` / `Destroy` / `UpdateWithTemplate` —
+    minimal in-memory template that stores the create info and builds
+    `VkWriteDescriptorSet` array from user data, then calls
+    `vkUpdateDescriptorSets` (no longer returns VK_ERROR_FEATURE_NOT_PRESENT)
+  - `vkCreateSamplerYcbcrConversion` / `DestroySamplerYcbcrConversion` —
+    dummy handles (feature reported as FALSE, so never used in practice)
+  - `vkCmdSetDeviceMask` — no-op (single GPU)
+  - `vkCmdDispatchBase` — delegates to CmdDispatch (base offsets noted as
+    a known limitation — non-zero base would require shader support)
+- pNext chain handling preserves `pNext` across `memset` (save/restore
+  pattern) so structures after Vulkan11Properties/Features/IDProperties in
+  the chain are still visited
+- Moved `GetBufferMemoryRequirements2` / `GetImageMemoryRequirements2` /
+  `GetImageSparseMemoryRequirements2` from `g_instance_funcs` to
+  `g_device_funcs` so `vkGetDeviceProcAddr` resolves them correctly
+- Fixed `GetImageSparseMemoryRequirements2` signature (VkDevice, not
+  VkPhysicalDevice) and entrypoint to call the implementation
+- Fixed `GetBufferMemoryRequirements2` / `GetImageMemoryRequirements2` signatures
+  to use `VkBufferMemoryRequirementsInfo2` / `VkImageMemoryRequirementsInfo2`
+  (Vulkan 1.1 signature with info struct, not raw buffer/image handle)
+- All Vulkan 1.1 promoted extensions advertised for backwards compatibility
+  (VK_KHR_get_physical_device_properties2, VK_KHR_external_memory_capabilities,
+   VK_KHR_bind_memory2, VK_KHR_maintenance1/2/3, etc.)
+- All Vulkan 1.1 features reported as FALSE (GCN 1.0 / Liverpool has no
+  16-bit storage, multiview, variable pointers, YCbCr, protected memory)
+- Subgroup properties: size=64 (GCN wavefront64), basic ops in VS/FS/CS
+- 4/4 tests pass, 0 VVL errors, 0 warnings
+
+**Phase 5 (2026-07-24): Multi-subpass + indirect draw VVL tests.**
+- Added multi-subpass render pass test: 2-attachment, 2-subpass render pass
+  with input attachment and subpass dependency. Tests CmdBeginRenderPass,
+  CmdNextSubpass, CmdEndRenderPass. No draw (pipeline incompatibility —
+  existing pipeline was created for single-subpass rp; a separate pipeline
+  would be needed to draw in the multi-subpass render pass).
+- Added indirect draw test: CmdDrawIndirect with VkDrawIndirectCommand
+  {3,1,0,0}, CmdDrawIndexedIndirect with VkDrawIndexedIndirectCommand
+  {3,1,0,0,0} reusing the index buffer from the indexed draw test.
+- Added VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT to the main test image (needed
+  by the multi-subpass render pass input attachment).
+- All resources deferred to after QueueWaitIdle (no leaks, no UAF).
+- 4/4 tests pass, 0 VVL errors, 0 warnings
+
+**Phase 5 (2026-07-24): Depth/stencil attachment VVL test.**
+- Added depth/stencil attachment test: D32_SFLOAT_S8_UINT depth/stencil
+  image + view (aspect mask DEPTH|STENCIL), render pass with color +
+  depth/stencil attachments (loadOp/stencilLoadOp=CLEAR), framebuffer
+  with both, begin render pass with depth=1.0/stencil=0 clear values,
+  set dynamic state, end render pass. Tests the depth/stencil clear
+  path in CmdBeginRenderPass (vk_ps4_clear_depth_draw via GCN lazy clear).
+- No draw (pipeline incompatibility — existing pipeline was created for
+  single-attachment render pass; a separate pipeline with depth/stencil
+  state would be needed to draw in the depth/stencil render pass).
+- All resources deferred to after QueueWaitIdle (no leaks, no UAF).
+- 4/4 tests pass, 0 VVL errors, 0 warnings
+
+**Phase 5 (2026-07-24): Dolphin emulator compatibility test.**
+- Built Dolphin emulator (dolphin-tool + dolphin-emu-nogui) from source
+  with Vulkan backend enabled.
+- Analyzed Dolphin's VulkanContext initialization path for compatibility:
+  - Dolphin requires minimum Vulkan 1.0, uses 1.1 if available (vulkan-ps4
+    reports 1.1 ✓)
+  - Dolphin queries VkPhysicalDeviceSubgroupProperties via pNext chain
+    (vulkan-ps4 reports subgroupSize=64, BASIC ops, graphics|compute|FS ✓)
+  - Dolphin requires: dualSrcBlend, geometryShader, fragmentStoresAndAtomics,
+    textureCompressionBC (all VK_TRUE in vulkan-ps4 ✓)
+  - Dolphin optionally uses: largePoints, occlusionQueryPrecise, samplerAnisotropy,
+    logicOp, sampleRateShading, depthClamp, shaderClipDistance,
+    shaderTessellationAndGeometryPointSize (all VK_TRUE ✓)
+  - Dolphin uses VMA with VMA_VULKAN_VERSION 1002000, which needs
+    vkGetBufferMemoryRequirements2/vkGetImageMemoryRequirements2/
+    vkBindBufferMemory2/vkBindImageMemory2/vkGetPhysicalDeviceMemoryProperties2
+    via vkGetDeviceProcAddr (all now in g_device_funcs ✓)
+  - Dolphin requires vkGetRenderAreaGranularity (implemented ✓)
+  - Dolphin requires vkCreatePipelineCache/vkGetPipelineCacheData/
+    vkMergePipelineCaches (implemented ✓)
+  - Dolphin does NOT use: descriptor update templates, sampler YCbCr
+    conversion, push descriptors, dynamic rendering, timeline semaphores
+- Added test_dolphin_compat.c: mimics Dolphin's exact VulkanContext init
+  path including instance creation with VK_KHR_portability_enumeration
+  (required by Vulkan loader 1.4+ for portability drivers on macOS),
+  Properties2 with subgroup pNext, all Dolphin features, device creation,
+  VMA-like allocation, pipeline cache, render pass, render area granularity,
+  command pool/buffer, descriptor set layout, pipeline layout, sampler,
+  query pool, fence/semaphore, command buffer submit, pipeline cache data.
+- 5/5 tests pass, 0 errors.
+
+**Phase 5 (2026-07-23): Swapchain/fence sync review fixes + VVL test expansion.**
+- Fixed 4 bugs from second code review:
+  - CRITICAL: QueueSubmit now clears signaled=false before EOP emit, so
+    WaitForFences doesn't short-circuit on stale flag from AcquireNextImageKHR
+  - MEDIUM: No-fences fallback calls DeviceWaitIdle instead of returning
+    image with pending GPU work
+  - MEDIUM: All-in-flight wait uses waitAll=VK_FALSE (wait for ANY fence)
+    instead of full timeout per fence
+  - LOW: DestroySwapchainKHR calls DeviceWaitIdle before freeing resources
+- Expanded VVL test coverage:
+  - Indexed draws: CmdDrawIndexed with vertexOffset/firstInstance, including
+    regression test for zero vertexOffset (sticky register state leak)
+  - Push constants: CmdPushConstants with VS push constant range, multiple
+    updates between draws
+  - Compute pipelines: vkCreateComputePipelines + CmdDispatch with SSBO,
+    memory barrier after compute write
+- 4/4 tests pass, 0 VVL errors
+- Third code review confirmed all fixes correct: no bugs, regressions,
+  or correctness issues. Verified: signal clearing timing, all-in-flight
+  wait array sizing (GNM_VIDEO_OUT_MAX_BUFFERS=4), DeviceWaitIdle
+  placement, deferred test cleanup (no leaks/UAF), shader interface
+  compatibility, VVL-clean (0 errors, 0 warnings)
+
+**Phase 5 (2026-07-22): VVL testing + code review fixes.***
 - Added validation_test that goes through the Vulkan loader with
   VK_LAYER_KHRONOS_validation enabled
 - VVL found VkPhysicalDeviceLimits was entirely zeroed, causing errors
@@ -594,6 +763,13 @@ indirect draws, and compute pipelines.
   via `sceGnmRtBuildInfo` + `sceGnmTexCreate2d`
 - Vulkan 1.2 render pass 2: `CmdBeginRenderPass2` / `CmdNextSubpass2` /
   `CmdEndRenderPass2` + `VK_KHR_create_renderpass2` extension
+- Vulkan 1.1: `EnumerateInstanceVersion`, `EnumeratePhysicalDeviceGroups`,
+  `GetPhysicalDeviceProperties2` / `Features2` / `FormatProperties2` with
+  full pNext chain handling (Vulkan11Properties/Features, SubgroupProperties,
+  Maintenance3Properties, etc.), `BindBufferMemory2` / `BindImageMemory2`,
+  `GetDeviceQueue2`, `GetDescriptorSetLayoutSupport`, external memory/fence/
+  semaphore capability stubs, device group stubs, `CmdSetDeviceMask`,
+  `CmdDispatchBase`. All 1.1 promoted extensions advertised.
 - `CmdUpdateBuffer` staging via `sceGnmCmdAllocInside` (semantically correct)
 - `WaitUntilSafeForRendering` on swapchain image render passes
 - Depth/array layer iteration in all image copy commands
@@ -609,12 +785,37 @@ indirect draws, and compute pipelines.
 82/82 format tests pass.  Validation test runs VVL with zero errors.
 
 **Remaining work:**
-- PS4 hardware testing (test_triangle.self on PS4)
+- PS4 hardware testing (test_triangle_ps4.self on PS4)
 - RetroArch link smoke test on PS4
 - Phase 4: Optional extensions (on demand)
+  - DONE: VK_KHR_driver_properties (driver name/info/ID/conformance version)
+  - DONE: VK_KHR_imageless_framebuffer (imageless FB + attachment begin info)
+  - DONE: VK_EXT_descriptor_indexing (bindless, variable count, update-after-bind)
+  - DONE: VK_KHR_timeline_semaphore (software-emulated 64-bit counter)
+  - DONE: VK_KHR_image_format_list (dependency for imageless_framebuffer)
+  - DONE: Format features (TRANSFER_SRC/DST_BIT added to all formats)
+  - DONE: VVL tests for all 4 extensions (section 16 in test_validation.c)
 - Phase 5: Expand VVL test coverage (compute pipelines, multi-subpass,
-  depth/stencil attachment, indexed draws, indirect draws)
-- CmdClearColorImage for tiled RTs (needs RT binding before draw-based clear)
+  depth/stencil attachment, indexed draws, indirect draws, push constants)
+  - DONE: indexed draws (CmdDrawIndexed with vertexOffset/firstInstance)
+  - DONE: push constants (CmdPushConstants with VS push constant range)
+  - DONE: compute pipelines (vkCreateComputePipelines + CmdDispatch)
+  - DONE: multi-subpass (CmdNextSubpass with 2-subpass render pass +
+    input attachment + subpass dependency)
+  - DONE: indirect draws (CmdDrawIndirect + CmdDrawIndexedIndirect)
+  - DONE: depth/stencil attachment (D32_SFLOAT_S8_UINT render pass + clear)
+- PS4 packaging: DONE — create-fself + PKG packaging in Makefile.orbis
+  - test_triangle_ps4.self (15MB FSELF) + IV0000-VPS400000_00-VKTRIANGLETEST00.pkg (17MB)
+  - Mesa utility stubs (mesa_stubs.c) for libpsbc.orbis.a unresolved symbols
+  - Static linking: libvulkan_ps4.a + libopengnm.a (--whole-archive) + libpsbc.orbis.a
+- Swapchain sync: DONE (in-flight tracking, fence-based wait)
+- Fence timeout: DONE (honors timeout, tiered yield)
+- CmdPushConstants: DONE (SET_SH_REG via psbc IMM_ALUFLOATCONST slots)
+- CmdDrawIndexed vertexOffset/firstInstance: DONE (SET_SH_REG before draw)
+- CmdBindDescriptorSets firstSet: DONE (actual set index tracking)
+- CmdClearColorImage for tiled RTs: DONE (draw-based clear via embedded clear PS)
+- CmdDispatchIndirect >32-bit addr: DONE (staging via sceGnmCmdAllocInside)
+- Render pass deep copy: DONE (no more UAF)
 - GPU WaitMem for wait semaphores: DONE
 - Texel buffer views: DONE
 - Tiled RT clear pixel shader: DONE (render pass clears only, 6 bugs fixed)
@@ -627,6 +828,8 @@ indirect draws, and compute pipelines.
 **Shader compiler:** `opengnm-psbc/Makefile.orbis` now produces
 `libpsbc.orbis.a` with 478 PS4/FreeBSD ELF objects. `vulkan-ps4/Makefile.orbis`
 links that archive and defines `VK_PS4_HAVE_PSBC=1`, so the PS4 ICD uses the
-real SPIR-V → GCN compilation path for the currently supported vertex and
-fragment shader headers instead of the stub shader path. Compute, geometry,
-and tessellation GNM binary headers remain follow-up work.
+real SPIR-V → GCN compilation path for all shader stages (vertex,
+fragment, compute, geometry, tessellation control/eval). psbc emits
+GnmInputUsageSlot entries for inline push constants and VS base_vertex/
+start_instance, which the ICD extracts at pipeline creation to emit
+SET_SH_REG PM4 packets for push constants and draw offsets.
