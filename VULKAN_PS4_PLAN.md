@@ -411,6 +411,13 @@ without rewrites.
 
 34. **SPIRV-Tools validation**
     - Validate all SPIR-V input through `SPIRV-Tools` before compilation
+    - DONE: `vkCreateShaderModule` validates SPIR-V with `spvValidateBinary`
+      using `SPV_ENV_VULKAN_1_1` target env.  Basic sanity checks (magic
+      number, size multiple of 4, min 20 bytes) are always performed;
+      full SPIRV-Tools validation is enabled when the library is found
+      (host build only, via CMake `find_library`).  Invalid SPIR-V returns
+      `VK_ERROR_INVALID_SHADER_NV`.  VVL test 17e exercises both reject
+      (bad magic) and accept (valid minimal shader) paths.
 
 35. **Performance optimization**
     - Pipeline cache persistence — DONE: FNV-1a hashed cache with
