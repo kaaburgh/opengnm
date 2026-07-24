@@ -373,22 +373,33 @@ without rewrites.
 - `VK_KHR_image_format_list` (Vulkan 1.2) — DONE: dependency for
   imageless_framebuffer
 - `VK_KHR_swapchain` (required for WSI, already in Phase 1)
+- `VK_KHR_create_renderpass2` (Vulkan 1.2) — DONE: CreateRenderPass2
+  converts v2 structs to v1 and delegates to CreateRenderPass
+- `VK_KHR_depth_stencil_resolve` (Vulkan 1.2) — DONE: properties report
+  SAMPLE_ZERO resolve modes, independentResolve
+- `VK_KHR_spirv_1_4` (Vulkan 1.2) — DONE: handled by opengnm-psbc
+  via Mesa NIR (no features struct, extension-only)
+- `VK_KHR_shader_float_controls` (Vulkan 1.2) — DONE: dependency for
+  spirv_1_4, reports float32 denorm flush-to-zero, signedZeroInfNan preserve
+- `VK_EXT_scalar_block_layout` (Vulkan 1.2) — DONE: scalarBlockLayout=TRUE
+- `VK_KHR_uniform_buffer_standard_layout` (Vulkan 1.2) — DONE:
+  uniformBufferStandardLayout=TRUE
+- `VK_EXT_host_query_reset` (Vulkan 1.2) — DONE: vkResetQueryPoolEXT
+  zeros query result memory on host
+- `VK_KHR_shader_atomic_int64` (Vulkan 1.2) — DONE:
+  shaderBufferInt64Atomics=TRUE (GCN buffer atomics)
+- `VK_KHR_buffer_device_address` (Vulkan 1.2) — DONE:
+  vkGetBufferDeviceAddress returns GNM direct memory GPU address
+- `VK_KHR_shader_subgroup_extended_types` (Vulkan 1.2) — DONE:
+  shaderSubgroupExtendedTypes=TRUE (GCN DPP/SWIZZLE)
+- `VK_KHR_vulkan_memory_model` (Vulkan 1.2) — DONE:
+  vulkanMemoryModel=TRUE, deviceScope=TRUE
+- `VK_EXT_separate_stencil_usage` (Vulkan 1.2) — DONE: extension-only,
+  no features struct (adds VkImageCreateFlag)
 
 **Not yet implemented:**
 - `VK_KHR_surface` / `VK_KHR_display` (PS4 has no window system —
   swapchain is the display)
-- `VK_KHR_buffer_device_address` (Vulkan 1.2) — GNM uses 64-bit
-  addresses already
-- `VK_KHR_shader_atomic_int64` (Vulkan 1.2) — GCN hardware atomics
-- `VK_KHR_shader_subgroup_extended_types` (Vulkan 1.2) — GCN DPP/SWIZZLE
-- `VK_EXT_scalar_block_layout` (Vulkan 1.2) — adjust UBO/SSBO layout
-- `VK_KHR_uniform_buffer_standard_layout` (Vulkan 1.2)
-- `VK_KHR_vulkan_memory_model` (Vulkan 1.2) — barrier emission
-- `VK_KHR_spirv_1_4` (Vulkan 1.2) — opengnm-psbc handles via Mesa NIR
-- `VK_KHR_create_renderpass2` (Vulkan 1.2) — wrapper over render pass
-- `VK_KHR_depth_stencil_resolve` (Vulkan 1.2)
-- `VK_EXT_host_query_reset` (Vulkan 1.2)
-- `VK_EXT_separate_stencil_usage` (Vulkan 1.2)
 
 ### Phase 5 — Conformance & polish
 
@@ -793,8 +804,20 @@ indirect draws, and compute pipelines.
   - DONE: VK_EXT_descriptor_indexing (bindless, variable count, update-after-bind)
   - DONE: VK_KHR_timeline_semaphore (software-emulated 64-bit counter)
   - DONE: VK_KHR_image_format_list (dependency for imageless_framebuffer)
+  - DONE: VK_KHR_create_renderpass2 (v2→v1 conversion + delegation)
+  - DONE: VK_KHR_depth_stencil_resolve (SAMPLE_ZERO resolve modes)
+  - DONE: VK_KHR_spirv_1_4 (handled by opengnm-psbc, extension-only)
+  - DONE: VK_KHR_shader_float_controls (dependency for spirv_1_4)
+  - DONE: VK_EXT_scalar_block_layout (scalarBlockLayout=TRUE)
+  - DONE: VK_KHR_uniform_buffer_standard_layout (TRUE)
+  - DONE: VK_EXT_host_query_reset (vkResetQueryPoolEXT)
+  - DONE: VK_KHR_shader_atomic_int64 (buffer atomics=TRUE)
+  - DONE: VK_KHR_buffer_device_address (GetBufferDeviceAddress)
+  - DONE: VK_KHR_shader_subgroup_extended_types (TRUE)
+  - DONE: VK_KHR_vulkan_memory_model (TRUE, deviceScope=TRUE)
+  - DONE: VK_EXT_separate_stencil_usage (extension-only)
   - DONE: Format features (TRANSFER_SRC/DST_BIT added to all formats)
-  - DONE: VVL tests for all 4 extensions (section 16 in test_validation.c)
+  - DONE: VVL tests for all extensions (sections 16a-16m in test_validation.c)
 - Phase 5: Expand VVL test coverage (compute pipelines, multi-subpass,
   depth/stencil attachment, indexed draws, indirect draws, push constants)
   - DONE: indexed draws (CmdDrawIndexed with vertexOffset/firstInstance)
