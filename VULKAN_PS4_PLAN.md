@@ -407,16 +407,26 @@ without rewrites.
     - Run `Vulkan-ValidationLayers` against the ICD on host (generic
       backend) to find spec violations
     - Fix all validation errors
+    - DONE: 5/5 tests pass with 0 VVL errors, 0 warnings
 
 34. **SPIRV-Tools validation**
     - Validate all SPIR-V input through `SPIRV-Tools` before compilation
 
 35. **Performance optimization**
-    - Pipeline cache persistence
-    - Descriptor set reuse / pooling
-    - Command buffer pooling
-    - Minimize PM4 packet overhead
-    - Batch user-data register writes
+    - Pipeline cache persistence — DONE: FNV-1a hashed cache with
+      serialization (GetPipelineCacheData/CreatePipelineCache initialData),
+      MergePipelineCaches, cache lookup/insert in pipeline creation
+    - Descriptor set reuse / pooling — DONE: free list in VkDescriptorPool
+      (up to 256 sets), AllocateDescriptorSets reuses from free list,
+      FreeDescriptorSets adds to free list, ResetDescriptorPool frees all
+    - Command buffer pooling — DONE: free list in VkCommandPool (up to 256
+      buffers), AllocateCommandBuffers reuses from free list (preserves PM4
+      buffer), FreeCommandBuffers adds to free list, TrimCommandPool frees
+    - Minimize PM4 packet overhead — DONE: batched SET_SH_REG for
+      base_vertex+start_instance (count=2 when consecutive)
+    - Batch user-data register writes — DONE: CmdPushConstants groups
+      consecutive user-data registers into single SET_SH_REG packets
+    - VVL tests: sections 17a-17d exercise all performance features
 
 36. **Multi-queue support**
     - Separate graphics and compute queues (GNM supports compute queues
@@ -827,6 +837,13 @@ indirect draws, and compute pipelines.
     input attachment + subpass dependency)
   - DONE: indirect draws (CmdDrawIndirect + CmdDrawIndexedIndirect)
   - DONE: depth/stencil attachment (D32_SFLOAT_S8_UINT render pass + clear)
+- Phase 5: Performance optimizations — DONE
+  - DONE: Pipeline cache persistence (FNV-1a hash, serialize/deserialize,
+    MergePipelineCaches, cache lookup/insert in pipeline creation)
+  - DONE: Descriptor set pooling (free list in VkDescriptorPool, reuse on alloc)
+  - DONE: Command buffer pooling (free list in VkCommandPool, reuse PM4 buffer)
+  - DONE: Batched SET_SH_REG writes (base_vertex+start_instance, push constants)
+  - DONE: VVL tests 17a-17d (pipeline cache, descriptor pooling, CB pooling, merge)
 - PS4 packaging: DONE — create-fself + PKG packaging in Makefile.orbis
   - test_triangle_ps4.self (15MB FSELF) + IV0000-VPS400000_00-VKTRIANGLETEST00.pkg (17MB)
   - Mesa utility stubs (mesa_stubs.c) for libpsbc.orbis.a unresolved symbols
