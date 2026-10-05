@@ -16,6 +16,15 @@
 | shadPS4 (для сверки HLE) | `shadps4-emu/shadPS4@dade3af` (2026-10-05) |
 | OpenOrbis toolchain (только заголовки) | `OpenOrbis/OpenOrbis-PS4-Toolchain@HEAD` |
 
+> **Обновление 2026-10-05: эмпирическая проверка.** Тест `gpu_solid_rt` из
+> `kaaburgh/shadps4-open-test` собран и прогнан на shadPS4 `dade3af` с lavapipe:
+> PASS, негативные контроли дают FAIL. Подробности, патчи и логи:
+> [SHADPS4_LAVAPIPE_BASELINE.md](SHADPS4_LAVAPIPE_BASELINE.md). По итогам прогона
+> добавлен блокер [B6](#-b6-event_write_eop-с-int_sel3-роняет-shadps4) (EOP с
+> `INT_SEL=3` роняет shadPS4) и уточнён B4: на shadPS4 бит предикации сейчас
+> игнорируется. Ошибка линковки без `-lSceVideoOut` из ответа про `gpu_solid_rt`
+> подтвердилась.
+
 ---
 
 ## TL;DR
@@ -232,6 +241,12 @@ flags.predication_enabled=1  PKT3 header=0xc0012d01 predicate_bit=1
 **Рекомендация.** `GnmCommandBuffer res = {0};` плюс тест с «грязным» стеком,
 как в PoC.
 
+**Уточнение после прогона на shadPS4.** Эмулятор бит `predicate` у draw-пакетов
+сейчас не проверяет (`liverpool.cpp`), а `SET_PREDICATION` у него не реализован.
+Поэтому на shadPS4 `dade3af` B4 на результат не влияет. Блокером он остаётся
+из-за железа и будущих версий эмулятора: тест, зелёный на shadPS4, может
+оказаться недетерминированным на PS4.
+
 ### 🔴 B5. В репозитории нет OSS-пути к шейдерам
 
 - Ассемблер GCN (`src/gcn/assembler.c`) внутренний (заголовок не
@@ -242,7 +257,8 @@ flags.predication_enabled=1  PKT3 header=0xc0012d01 predicate_bit=1
   репозитории и тяжёлый как зависимость для тестов.
 - shadPS4 ищет в коде шейдера футер `ShaderBinaryInfo` с сигнатурой
   `"OrbShdr"` (`regs_shader.h`, `SearchBinaryInfo`, лимит 0x4000 dword). Если
-  футера нет, получаем `UNREACHABLE`. Поле `shader_hash` из футера служит
+  футера нет, получаем `UNREACHABLE` (подтверждено прогоном: `gpu_solid_rt`
+  копировал в GPU-память код без футера и упал именно так). Поле `shader_hash` из футера служит
   ключом кэша. Значит, **каждому тестовому шейдеру нужен уникальный хэш**,
   иначе тесты будут мешать друг другу через кэш.
 - Шейдеры из игр — чужая собственность, класть их бинарники в репро нельзя.
@@ -259,6 +275,35 @@ flags.predication_enabled=1  PKT3 header=0xc0012d01 predicate_bit=1
 
 Без этого единственные доступные шейдеры — встроенные (fullscreen VS и dummy
 PS), а они проходят через B1.
+
+### 🔴 B6. `EVENT_WRITE_EOP` с `INT_SEL=3` роняет shadPS4
+
+`src/drawcommandbuffer.c:1750` (`sceGnmDrawCmdEventWriteEop`) и `:2030`
+(`writeZpassDoneEop`, occlusion query)
+
+Найдено при прогоне `gpu_solid_rt` на shadPS4 + lavapipe
+([SHADPS4_LAVAPIPE_BASELINE.md](SHADPS4_LAVAPIPE_BASELINE.md)).
+
+- opengnm при любой записи данных ставит в EOP
+  `EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM)`, то есть `INT_SEL=3`
+  (значение взято из Mesa).
+- shadPS4 (`pm4_cmds.h`, `SignalFence`) обрабатывает `INT_SEL` 0, 1 и 2, а 3
+  называет `IrqUndocumented`: в играх оно не встречается. На 3 срабатывает
+  `UNREACHABLE` → `Emulator::Shutdown()` + `int3`, эмулятор падает.
+- Данные метки при этом успевают записаться **до** падения. Тест увидел метку и
+  напечатал PASS в гонке с крашем (`<Critical> SignalFence: Unreachable code!`
+  стоит в логе раньше `SHADTEST ... PASS`). Это ложно-зелёный результат: при
+  другом тайминге маркер не вышел бы.
+- Под удар попадает любой тест, который ждёт GPU через
+  `sceGnmDrawCmdEventWriteEop` или использует occlusion query.
+
+**Рекомендация.** Эмитить значение, которое встречается в реальных командных
+потоках. Проверено: с `INT_SEL=2` (прерывание после подтверждения записи) тест
+даёт 3 из 3 PASS без `Critical`
+([patches/opengnm-eop-int-sel.patch](patches/opengnm-eop-int-sel.patch), там
+исправлено только место в `EventWriteEop`). Какое именно значение эмитит Sony Gnm
+для `writeAtEndOfPipe`, без железа не подтверждено. В shadPS4 стоит отдельно
+сделать обработку 3 вместо краша.
 
 ### 🟠 I1. Лицензия и происхождение кода
 
@@ -473,6 +518,7 @@ context/SH/uconfig-регистр или сырой PM4-пакет. Нет се�
 | 3 | Не определять экспорты `libSceGnmDriver` в orbis-сборке; переименовать собственный API в `ognm*` | B2 | 🔴 |
 | 4 | Добавить `prepareFlip` и пример `SubmitAndFlip`; исправить `rendering-pipeline.md` и `hardware-smoke.md` | B3 | 🔴 |
 | 5 | OSS-путь к шейдерам: `llvm-mc`/psbc и генератор футера `OrbShdr` | B5 | 🔴 |
+| 5a | EOP: заменить `INT_SEL=3` в `EventWriteEop` и `writeZpassDoneEop` | B6 | 🔴 |
 | 6 | Решение по лицензии, SPDX, NOTICE, документирование происхождения | I1 | 🟠 |
 | 7 | Дифференциальные тесты против HLE shadPS4; убрать тавтологичные проверки | I2 | 🟠 |
 | 8 | Липкий флаг ошибки в командном буфере, обработчик сообщений по умолчанию | I3 | 🟠 |

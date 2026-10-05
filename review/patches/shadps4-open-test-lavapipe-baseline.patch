@@ -1,0 +1,317 @@
+diff --git a/scripts/bootstrap-deps.sh b/scripts/bootstrap-deps.sh
+index 33c0910..404ba93 100644
+--- a/scripts/bootstrap-deps.sh
++++ b/scripts/bootstrap-deps.sh
+@@ -85,6 +85,8 @@ clone_at "$VULKAN_HEADERS_REPO" "$VULKAN_HEADERS_SHA" "$DEPS/Vulkan-Headers"
+ 
+ if [[ ! -x "$DEPS/opengnm-psbc/opengnm-psbc" ]]; then
+     cp -- "$ROOT/tooling/opengnm-psbc-linux.mak" "$DEPS/opengnm-psbc/config.mak"
++    # The upstream Makefile does not generate every Mesa codegen output it needs.
++    bash "$ROOT/tooling/psbc-codegen.sh" "$DEPS/opengnm-psbc"
+     make -C "$DEPS/opengnm-psbc" -j"$(nproc)"
+ fi
+ 
+diff --git a/scripts/run-test-lavapipe.sh b/scripts/run-test-lavapipe.sh
+new file mode 100755
+index 0000000..375912a
+--- /dev/null
++++ b/scripts/run-test-lavapipe.sh
+@@ -0,0 +1,25 @@
++#!/usr/bin/env bash
++# Run a test on shadPS4 with Mesa lavapipe (CPU Vulkan) under a private Xvfb.
++# Usage: SHADPS4=/path/to/shadps4 scripts/run-test-lavapipe.sh <test> [run-test.py args...]
++set -euo pipefail
++
++ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
++LVP_ICD="${LVP_ICD:-/usr/share/vulkan/icd.d/lvp_icd.json}"
++[[ -f "$LVP_ICD" ]] || { echo "lavapipe ICD not found: $LVP_ICD (install mesa-vulkan-drivers)" >&2; exit 2; }
++command -v Xvfb >/dev/null || { echo "Xvfb not found (install xvfb)" >&2; exit 2; }
++
++DISPLAY_NUM="${XVFB_DISPLAY:-:97}"
++Xvfb "$DISPLAY_NUM" -screen 0 1280x720x24 -nolisten tcp >/dev/null 2>&1 &
++XVFB_PID=$!
++trap 'kill "$XVFB_PID" 2>/dev/null || true' EXIT
++for _ in $(seq 50); do
++    [[ -e "/tmp/.X11-unix/X${DISPLAY_NUM#:}" ]] && break
++    sleep 0.1
++done
++
++export DISPLAY="$DISPLAY_NUM"
++export VK_ICD_FILENAMES="$LVP_ICD"   # older loaders
++export VK_DRIVER_FILES="$LVP_ICD"    # loader >= 1.3.207
++export SDL_AUDIO_DRIVER="${SDL_AUDIO_DRIVER:-dummy}"
++
++python3 "$ROOT/scripts/run-test.py" "$@"
+diff --git a/scripts/run-test.py b/scripts/run-test.py
+index f9aad6b..eccbef1 100644
+--- a/scripts/run-test.py
++++ b/scripts/run-test.py
+@@ -2,6 +2,7 @@
+ from __future__ import annotations
+ 
+ import argparse
++import json
+ import os
+ from pathlib import Path
+ import re
+@@ -10,6 +11,7 @@ import subprocess
+ import sys
+ import time
+ 
++ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+ MARKER = re.compile(r"SHADTEST\s+name=(?P<name>\S+)\s+status=(?P<status>PASS|FAIL)\b(?P<detail>.*)")
+ 
+ 
+@@ -17,14 +19,27 @@ def write_isolated_config(root: Path) -> Path:
+     """Create the minimal host config required by the pixel-readback oracle."""
+     user_dir = root / "shadPS4"
+     user_dir.mkdir(parents=True, exist_ok=True)
+-    config = user_dir / "config.toml"
++    # On a fresh user dir shadPS4 creates home/1000 and unconditionally shows a
++    # modal "Save Migration" SDL dialog (even with nothing to migrate), which
++    # blocks unattended runs. Pre-creating the default user's home skips it.
++    for sub in ("savedata", "trophy", "inputs"):
++        (user_dir / "home" / "1000" / sub).mkdir(parents=True, exist_ok=True)
++    # Current shadPS4 reads config.json. A lone legacy config.toml makes it pop a
++    # modal "Config Migration" SDL dialog, which hangs an unattended run.
++    config = user_dir / "config.json"
+     config.write_text(
+-        "[GPU]\n"
+-        "# Stage-0 oracle reads a GPU-written linear RT from guest CPU memory.\n"
+-        "# These settings make that readback requirement explicit instead of\n"
+-        "# accidentally depending on a developer's global shadPS4 config.\n"
+-        "readbacksMode = 2\n"
+-        "readbackLinearImages = true\n",
++        json.dumps(
++            {
++                # Stage-0 oracle reads a GPU-written linear RT from guest CPU
++                # memory, so make that readback requirement explicit.
++                "GPU": {
++                    "readbacks_mode": 2,
++                    "readback_linear_images_enabled": True,
++                },
++            },
++            indent=2,
++        )
++        + "\n",
+         encoding="utf-8",
+     )
+     return config
+@@ -107,7 +122,7 @@ def main() -> int:
+                     for line in rest.splitlines(True):
+                         lines.append(line)
+                         sys.stdout.write(line)
+-                        match = MARKER.search(line)
++                        match = MARKER.search(ANSI_ESCAPE.sub("", line))
+                         if match and match.group("name") == args.test:
+                             marker_status = match.group("status")
+                             marker_line = match.group(0)
+@@ -121,7 +136,7 @@ def main() -> int:
+                 lines.append(line)
+                 sys.stdout.write(line)
+                 sys.stdout.flush()
+-                match = MARKER.search(line)
++                match = MARKER.search(ANSI_ESCAPE.sub("", line))
+                 if match and match.group("name") == args.test:
+                     marker_status = match.group("status")
+                     marker_line = match.group(0)
+diff --git a/tests/gpu_solid_rt/Makefile b/tests/gpu_solid_rt/Makefile
+index 4f9708f..5da5385 100644
+--- a/tests/gpu_solid_rt/Makefile
++++ b/tests/gpu_solid_rt/Makefile
+@@ -16,6 +16,9 @@ endif
+ GLSLC ?= glslc
+ 
+ ELF := $(OUT)/gpu_solid_rt.elf
++RAW_ELF := $(BUILD)/gpu_solid_rt.raw.elf
++OELF := $(BUILD)/gpu_solid_rt.oelf
++CREATE_FSELF := $(TOOLCHAIN)/bin/linux/create-fself
+ OBJ := $(BUILD)/main.o
+ VERT_SPV := $(BUILD)/fullscreen.vert.spv
+ FRAG_SPV := $(BUILD)/solid.frag.spv
+@@ -46,9 +49,15 @@ $(BUILD) $(OUT) $(OUT)/assets:
+ $(OBJ): src/main.c | $(BUILD)
+ 	$(CC) $(CFLAGS) -c "$<" -o "$@"
+ 
+-$(ELF): $(OBJ) $(OPENGNM)/libopengnm.a | $(OUT)
++# ld.lld emits a plain ET_DYN/SysV ELF; the PS4 loader (and shadPS4) needs the
++# FreeBSD-ABI ET_SCE_* image with PT_SCE_* segments that create-fself produces.
++$(ELF): $(RAW_ELF) | $(OUT)
++	OO_PS4_TOOLCHAIN="$(TOOLCHAIN)" "$(CREATE_FSELF)" -in="$<" -out="$(OELF)" \
++		--eboot "$@" --paid 0x3800000000000011
++
++$(RAW_ELF): $(OBJ) $(OPENGNM)/libopengnm.a | $(BUILD)
+ 	$(LD) -o "$@" "$(OBJ)" $(LDFLAGS) \
+-		"$(OPENGNM)/libopengnm.a" -lc -lkernel -lSceGnmDriver \
++		"$(OPENGNM)/libopengnm.a" -lc -lkernel -lSceGnmDriver -lSceVideoOut \
+ 		"$(TOOLCHAIN)/lib/crt1.o" "$(TOOLCHAIN)/lib/crti.o" "$(TOOLCHAIN)/lib/crtn.o"
+ 
+ $(VERT_SPV): assets/fullscreen.vert.glsl | $(BUILD)
+diff --git a/tests/gpu_solid_rt/src/main.c b/tests/gpu_solid_rt/src/main.c
+index c8c735e..c516149 100644
+--- a/tests/gpu_solid_rt/src/main.c
++++ b/tests/gpu_solid_rt/src/main.c
+@@ -8,6 +8,7 @@
+ #include <orbis/libkernel.h>
+ 
+ #include <gnm_commandbuffer.h>
++#include <gnm_error.h>
+ #include <gnm_drawcommandbuffer.h>
+ #include <gnm_rendertarget.h>
+ #include <gnm_shader.h>
+@@ -78,6 +79,17 @@ static void emit_marker(const char* status, const char* detail) {
+     sceKernelDebugOutText(0, "\n");
+ }
+ 
++static unsigned g_gnm_errors = 0;
++
++/* OpenGNM drops diagnostics unless a handler is installed. */
++static void on_gnm_message(GnmMessageSeverity sev, const char* msg, void* user) {
++    (void)user;
++    if (sev == GNM_MSGSEV_ERR) {
++        g_gnm_errors += 1;
++    }
++    printf("opengnm %s: %s\n", sev == GNM_MSGSEV_ERR ? "error" : "warning", msg);
++}
++
+ static int fail(const char* reason) {
+     char detail[160];
+     snprintf(detail, sizeof(detail), "reason=%s", reason);
+@@ -282,8 +294,19 @@ static bool load_shader(GpuArena* arena, const char* path,
+         return false;
+     }
+ 
++    /* Keep the trailing "OrbShdr" ShaderBinaryInfo next to the code: shadPS4
++     * locates it by scanning forward from the shader address and aborts
++     * ("Shader binary info not found") without it. */
++    uint32_t copy_size = code_size;
++    const uint8_t* after_code = (const uint8_t*)code_src + code_size;
++    if (range_inside(shader_base, shader_size, after_code,
++                     sizeof(GnmShaderBinaryInfo)) &&
++        memcmp(after_code, GNM_SHADER_BINARY_INFO_MAGIC, 7) == 0) {
++        copy_size += sizeof(GnmShaderBinaryInfo);
++    }
++
+     void* stage_copy = malloc(stage_size);
+-    void* gpu_code = arena_alloc(arena, code_size, GNM_ALIGNMENT_SHADER_BYTES);
++    void* gpu_code = arena_alloc(arena, copy_size, GNM_ALIGNMENT_SHADER_BYTES);
+     if (!stage_copy || !gpu_code) {
+         free(stage_copy);
+         free(file);
+@@ -291,7 +314,7 @@ static bool load_shader(GpuArena* arena, const char* path,
+     }
+ 
+     memcpy(stage_copy, common, stage_size);
+-    memcpy(gpu_code, code_src, code_size);
++    memcpy(gpu_code, code_src, copy_size);
+ 
+     if (expected_type == GNM_SHADER_VERTEX) {
+         GnmVsShader* vs = (GnmVsShader*)stage_copy;
+@@ -357,6 +380,7 @@ static bool create_linear_rt(GpuArena* arena, GnmRenderTarget* rt,
+ int main(void) {
+     setvbuf(stdout, NULL, _IONBF, 0);
+     printf("shadps4-open-test: %s start\n", TEST_NAME);
++    sceGnmSetMessageHandler(on_gnm_message, NULL);
+ 
+     GpuArena arena;
+     if (!arena_init(&arena)) {
+@@ -404,6 +428,9 @@ int main(void) {
+ 
+     GnmCommandBuffer cmd =
+         sceGnmCmdInit(cmd_memory, COMMAND_BUFFER_SIZE, NULL, NULL);
++    /* sceGnmCmdInit leaves flags uninitialized; the draw helpers copy
++     * flags.predication_enabled into the PM4 predicate bit. */
++    memset(&cmd.flags, 0, sizeof(cmd.flags));
+     sceGnmDrawCmdInitDefaultHardwareState(&cmd);
+ 
+     const GnmPrimitiveSetup primitive = {
+@@ -439,6 +466,11 @@ int main(void) {
+         &cmd, GNM_FLUSH_AND_INV_CB_DATA_TS,
+         (uint64_t)(uintptr_t)eop_label, GNM_DATA_SEL_SEND_DATA64, EOP_VALUE);
+ 
++    if (g_gnm_errors != 0) {
++        result = fail("opengnm_command_errors");
++        goto cleanup;
++    }
++
+     void* dcb_addrs[1] = {cmd.beginptr};
+     uint32_t dcb_sizes[1] = {
+         (uint32_t)((uintptr_t)cmd.cmdptr - (uintptr_t)cmd.beginptr),
+diff --git a/tooling/opengnm-psbc-linux.mak b/tooling/opengnm-psbc-linux.mak
+index 9046925..a101c35 100644
+--- a/tooling/opengnm-psbc-linux.mak
++++ b/tooling/opengnm-psbc-linux.mak
+@@ -31,11 +31,13 @@ SHARED_FLAGS=\
+ 	-Isrc/util \
+ 	-Icmd/psbc \
+ 	-Iinclude/mesa \
+-	-D_XOPEN_SOURCE=500 \
++	-D_GNU_SOURCE \
+ 	-DUTIL_ARCH_LITTLE_ENDIAN=1 \
+ 	-DUTIL_ARCH_BIG_ENDIAN=0 \
+ 	-DHAVE_STRUCT_TIMESPEC=1 \
+-	-DHAVE_PTHREAD=1
++	-DHAVE_PTHREAD=1 \
++	-DBLAKE3_USE_NEON=0 -DBLAKE3_NO_SSE2 -DBLAKE3_NO_SSE41 \
++	-DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512
+ 
+ CC=clang
+ CXX=clang++
+@@ -54,3 +56,10 @@ CXXFLAGS=-std=c++17 -Wall -O2 -g $(SHARED_FLAGS) \
+ 	-Dalloca=__builtin_alloca -DHAVE_SYSCONF=1 -include strings.h
+ 
+ LDFLAGS=-lm -lpthread
++
++# Upstream hardcodes blake3_neon.c (the author builds on ARM64). On x86_64 the
++# portable implementation is enough for a host-side shader compiler.
++override BLAKE3_SRCS = \
++	src/util/blake3/blake3.c \
++	src/util/blake3/blake3_dispatch.c \
++	src/util/blake3/blake3_portable.c
+diff --git a/tooling/psbc-codegen.sh b/tooling/psbc-codegen.sh
+new file mode 100755
+index 0000000..c19e07d
+--- /dev/null
++++ b/tooling/psbc-codegen.sh
+@@ -0,0 +1,41 @@
++#!/usr/bin/env bash
++# Generate the Mesa codegen outputs that the pinned opengnm-psbc tree lists in
++# its .gitignore but whose standalone Makefile does not produce. Commands mirror
++# the custom_target() definitions in the vendored Mesa meson.build files.
++set -euo pipefail
++
++PSBC="${1:?usage: psbc-codegen.sh <opengnm-psbc dir>}"
++PY="${PYTHON:-python3}"
++cd "$PSBC"
++
++gen() { # gen <output> <command...>: run command, capture stdout into output
++    local out="$1"; shift
++    [[ -s "$out" ]] && return 0
++    "$@" >"$out.tmp" && mv -- "$out.tmp" "$out"
++}
++
++F=src/util/format
++gen $F/u_format_gen.h   "$PY" $F/u_format_table.py $F/u_format.yaml --enums
++gen $F/u_format_pack.h  "$PY" $F/u_format_table.py $F/u_format.yaml --header
++gen $F/u_format_table.c "$PY" $F/u_format_table.py $F/u_format.yaml
++gen src/util/format_srgb.c "$PY" src/util/format_srgb.py
++gen src/util/shader_stats.h "$PY" src/util/process_shader_stats.py \
++    src/util/shader_stats.rnc src/util/shader_stats.xml
++
++[[ -s src/compiler/builtin_types.h ]] || "$PY" src/compiler/builtin_types_h.py src/compiler/builtin_types.h
++[[ -s src/compiler/builtin_types.c ]] || "$PY" src/compiler/builtin_types_c.py src/compiler/builtin_types.c
++
++P=src/amd/packets
++for g in gfx11 gfx12; do
++    gen src/amd/common/amd_cp_packets_$g.h "$PY" $P/parse_cp_pm4_table_data_json.py \
++        $P/cp_pm4_table_data_gfx11.json $P/pm4_it_opcodes_gfx11.h \
++        $P/cp_pm4_table_data_gfx12.json $P/pm4_it_opcodes_gfx12.h $g packets_h
++done
++
++R=src/amd/registers
++gen src/amd/common/gfx10_format_table.c "$PY" src/amd/common/gfx10_format_table.py \
++    $F/u_format.yaml $R/gfx10-rsrc.json $R/gfx11-rsrc.json
++
++VKXML=../Vulkan-Headers/registry/vk.xml
++[[ -s src/vulkan/util/vk_struct_type_cast.h ]] || "$PY" src/vulkan/util/vk_struct_type_cast_gen.py \
++    --xml "$VKXML" --out src/vulkan/util/vk_struct_type_cast.h --beta false
