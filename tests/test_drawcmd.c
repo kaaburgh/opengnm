@@ -794,6 +794,35 @@ static TestResult test_copy_memory_layout(void) {
 	return test_success();
 }
 
+/* --- DispatchDirect: DISPATCH_DIRECT (4 data dwords) + NOP --- */
+static TestResult test_dispatch_direct_layout(void) {
+	memset(s_cmdbuf, 0, sizeof(s_cmdbuf));
+	GnmCommandBuffer cmd = new_cmdbuf();
+
+	sceGnmDrawCmdDispatchDirect(&cmd, 256, 2, 3, 0);
+
+	const uint32_t used = cmd_dwords_used(&cmd);
+	utasserteq((long long)used, 9LL);
+
+	/* PM4 count is "data dwords - 1": x, y, z, DISPATCH_INITIATOR. */
+	utasserteq((long long)PKT_TYPE(s_cmdbuf[0]), 3LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[0]), (long long)PKT3_DISPATCH_DIRECT);
+	utasserteq((long long)PKT_COUNT(s_cmdbuf[0]), 3LL);
+	utasserteq((long long)s_cmdbuf[1], 256LL);
+	utasserteq((long long)s_cmdbuf[2], 2LL);
+	utasserteq((long long)s_cmdbuf[3], 3LL);
+	utasserteq((long long)s_cmdbuf[4], 1LL); /* COMPUTE_SHADER_EN */
+
+	/* Walking the stream by header counts must land on the trailing NOP
+	 * and end exactly at the emitted size. */
+	const uint32_t nop = 0 + PKT_COUNT(s_cmdbuf[0]) + 2;
+	utasserteq((long long)nop, 5LL);
+	utasserteq((long long)PKT_TYPE(s_cmdbuf[nop]), 3LL);
+	utasserteq((long long)PKT3_OPCODE(s_cmdbuf[nop]), (long long)PKT3_NOP);
+	utasserteq((long long)(nop + PKT_COUNT(s_cmdbuf[nop]) + 2), (long long)used);
+	return test_success();
+}
+
 static TestResult test_copy_memory_rejects_invalid_args(void) {
 	uint32_t words[8] = {0};
 	GnmCommandBuffer cmd = sceGnmCmdInit(words, sizeof(words), NULL, NULL);
@@ -869,6 +898,7 @@ int run_tests_drawcmd(void) {
 	    {test_fill_memory_rejects_invalid_args, "FillMemory invalid args"},
 		    {test_fill_memory_splits_large_ranges, "FillMemory multi-packet range"},
 		    {test_copy_memory_layout, "CopyMemory DMA_DATA layout"},
+		    {test_dispatch_direct_layout, "DispatchDirect DISPATCH_DIRECT layout"},
 	    {test_copy_memory_rejects_invalid_args, "CopyMemory invalid args"},
 	    {test_blend_control_keeps_rop3_enabled, "BlendControl preserves ROP3"},
 	};
