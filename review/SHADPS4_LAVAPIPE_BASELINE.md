@@ -4,8 +4,9 @@
 
 ## Итог
 
-- Тест `gpu_solid_rt` из `kaaburgh/shadps4-open-test@ea584d9` даёт **PASS** на shadPS4
-  `dade3af` с Mesa lavapipe (llvmpipe, CPU-рендеринг) под Xvfb:
+- Тест `gpu_solid_rt` из `kaaburgh/shadps4-open-test@ea584d9` (с исправлениями ниже) даёт
+  **PASS** на shadPS4 `dade3af` с Mesa lavapipe (llvmpipe, CPU-рендеринг) под Xvfb, если в
+  shadPS4 есть двухстрочная обработка EOP `INT_SEL=3` (строка 8):
 
   ```text
   SHADTEST name=gpu_solid_rt status=PASS samples=16 expected=ffffffff pitch=64 rt_bytes=16384 dcb_bytes=1524
@@ -18,26 +19,24 @@
   - readback выключен (дефолтный конфиг shadPS4) → `FAIL reason=pixel_mismatch got=00000000`;
   - фрагментный шейдер пишет красный вместо белого → `FAIL ... got=ff0000ff`.
 - Чтобы дойти до PASS, понадобилось 12 исправлений в пяти местах (см. таблицу ниже).
-- **Всё внесено в репозитории.** Исправление opengnm — коммит `9a2a77a` в ветке
-  `claude/magical-ride-7m5mrn` форка `kaaburgh/opengnm`. Изменения теста — ветка
-  `claude/magical-ride-7m5mrn` в `kaaburgh/shadps4-open-test`, где `deps.lock`
-  указывает на этот коммит форка. Проверено со свежего клона: bootstrap за 137 с,
-  сборка, 2 из 2 PASS без `Critical`. Файлы в [patches/](patches/) остались как
-  исторический срез.
-  Ни одно из них не требует отладки GPU: это сборка, формат файлов, конфиг и
-  модальные диалоги. Два найденных бага блокируют автоматический запуск в shadPS4
-  upstream, один — в opengnm.
+- **Всё внесено в репозитории** (ветки `claude/magical-ride-7m5mrn`). Вопрос с EOP
+  пересмотрен по итогам ревью PR (см. строку 8): OpenGNM остаётся на upstream
+  `4b295ca`, а в shadPS4 нужен двухстрочный патч из
+  `kaaburgh/shadps4-open-test/patches/shadps4/`. Проверено со свежего клона: со
+  стоковым shadPS4 runner возвращает `INFRA_FAIL` (3 из 3), с патченным — PASS
+  (3 из 3, без `Critical`). Файлы в [patches/](patches/) — исторический срез первой
+  итерации.
 
 ## Окружение
 
 | Компонент | Версия |
 |---|---|
 | ОС | Ubuntu 24.04.4, 4 vCPU, 16 ГБ RAM, без GPU |
-| shadPS4 | `dade3af` (2026-10-05), RelWithDebInfo, clang 19.1.1 + libstdc++ 14, без патчей |
+| shadPS4 | `dade3af` (2026-10-05), RelWithDebInfo, clang 19.1.1 + libstdc++ 14; для PASS — плюс патч обработки EOP `INT_SEL=3` |
 | Vulkan | Mesa 25.2.8 lavapipe (llvmpipe, LLVM 20.1.2), Vulkan 1.4.318 |
 | Дисплей | Xvfb 21.1.12 |
 | OpenOrbis | v0.5.4 `toolchain-llvm-18.tar.gz` (sha256 из `deps.lock` совпал) |
-| opengnm | `4b295ca` + [patches/opengnm-eop-int-sel.patch](patches/opengnm-eop-int-sel.patch) |
+| opengnm | `4b295ca` (upstream, без изменений) |
 | opengnm-psbc | `a92a122` |
 | shadps4-open-test | `ea584d9` + [patches/shadps4-open-test-lavapipe-baseline.patch](patches/shadps4-open-test-lavapipe-baseline.patch) |
 
@@ -52,7 +51,7 @@
 | 5 | shadps4-open-test | прогон висит, если используется только `config.toml` | shadPS4 `dade3af` читает `config.json`; при одном старом TOML показывает модальный SDL-диалог «Config Migration» | runner пишет `config.json` (`GPU.readbacks_mode=2`, `GPU.readback_linear_images_enabled=true`) | этот репозиторий |
 | 6 | **shadPS4** | первый запуск в свежем каталоге пользователя висит бесконечно | `UserSettings.Load()` → `UserManager::CreateDefaultUsers()` (`user_manager.cpp:300`) → `AskMigrationOption()` показывает модальный «Save Migration» **безусловно**, даже когда мигрировать нечего; наличие старых сейвов проверяется только после диалога | runner заранее создаёт `home/1000/{savedata,trophy,inputs}` | **shadPS4 upstream**: спрашивать, только если старые сейвы или трофеи существуют |
 | 7 | shadps4-open-test | shadPS4: `SearchBinaryInfo: Unreachable code! Shader binary info not found.` | тест копировал в GPU-память только код шейдера, без идущего следом футера `OrbShdr` (`ShaderBinaryInfo`), а shadPS4 ищет его рядом с кодом | `load_shader` копирует код вместе с футером, если тот идёт сразу за ним | этот репозиторий |
-| 8 | **opengnm** | shadPS4: `SignalFence: Unreachable code!` (`pm4_cmds.h:508`), эмулятор падает (`int3`); PASS успевал выйти **в гонке** с падением | `sceGnmDrawCmdEventWriteEop` всегда ставит `INT_SEL=3` (`EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM` из Mesa); shadPS4 знает только 0/1/2 (3 у него называется `IrqUndocumented`), то есть игры его не используют. То же значение в `writeZpassDoneEop` (occlusion query) | [patches/opengnm-eop-int-sel.patch](patches/opengnm-eop-int-sel.patch): `INT_SEL=2` | **opengnm upstream** (оба места); в shadPS4 можно обрабатывать 3 как «запись с подтверждением» вместо краша |
+| 8 | **shadPS4** | shadPS4: `SignalFence: Unreachable code!` (`pm4_cmds.h:508`), эмулятор падает (`int3`); PASS успевал выйти **в гонке** с падением | `sceGnmDrawCmdEventWriteEop` ставит `INT_SEL=3` (`SEND_DATA_ON_CONFIRM`); обработчик `EVENT_WRITE_EOP` в shadPS4 знает только 0/1/2, хотя `RELEASE_MEM` значение 3 принимает | первая попытка меняла OpenGNM на `INT_SEL=2` (`SEND_INT_ON_CONFIRM`, добавляет прерывание) и откачена по ревью. Итог: патч shadPS4 `shadps4-open-test/patches/shadps4/` + runner отвергает `<Critical>` до маркера (код 2) | **shadPS4 upstream** |
 | 9 | окружение | сборка shadPS4 падает: `std::ranges::to`, `std::optional` не найдены; `CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND` | на Ubuntu 24.04 clang-19 по умолчанию берёт libstdc++ 13; для C++23-модулей CMake нужен `clang-scan-deps` | `libstdc++-14-dev`, `clang-tools-19` | документация shadPS4 (`building-linux.md` этого не упоминает) |
 | 10 | shadps4-open-test | (превентивно) | B4 из ревью (случайная предикация) и I3 (молча проглатываемые ошибки) | обнуление `cmd.flags`; обработчик сообщений opengnm и FAIL при его ошибках | этот репозиторий; B4 исправить в opengnm |
 | 11 | shadps4-open-test | маркер захватывает ANSI-хвост `\x1b[m` | лог shadPS4 цветной | runner вырезает ANSI перед разбором | этот репозиторий |
@@ -102,12 +101,13 @@ sudo apt install clang-19 clang-tools-19 lld-19 llvm-19 libstdc++-14-dev ninja-b
 git clone https://github.com/shadps4-emu/shadPS4 && cd shadPS4
 git checkout dade3afda7ea3102faad8e39e616556a9cdde90b
 git submodule update --init --recursive --depth=1
+git apply /path/to/shadps4-open-test/patches/shadps4/*.patch   # EOP INT_SEL=3
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 \
     -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=/usr/bin/clang-scan-deps-19
 cmake --build build --parallel "$(nproc)"
 
-# 3. Тест (ветка с исправлениями; deps.lock уже указывает на форк opengnm)
+# 3. Тест (ветка с исправлениями; OpenGNM — upstream 4b295ca)
 git clone -b claude/magical-ride-7m5mrn https://github.com/kaaburgh/shadps4-open-test
 cd shadps4-open-test
 bash scripts/bootstrap-deps.sh
@@ -115,18 +115,15 @@ bash scripts/build-test.sh gpu_solid_rt
 SHADPS4=/path/to/shadPS4/build/shadps4 bash scripts/run-test-lavapipe.sh gpu_solid_rt
 ```
 
-`deps.lock` закрепляет коммит форка по SHA. GitHub отдаёт его, пока коммит достижим
-из какой-нибудь ветки. Если ветку `claude/magical-ride-7m5mrn` форка удалить или
-сквошнуть при мерже, SHA станет недостижимым, поэтому `9a2a77a` стоит влить в
-`main` форка.
+Без патча shadPS4 runner вернёт `HOST_RESULT INFRA_FAIL shadPS4 critical before marker`
+(код 2): так и задумано.
 
 ## Что не проверено
 
 - Только lavapipe. Настоящие GPU (AMD, NVIDIA) не проверялись; в research-документе
   это отдельный пункт.
-- Реальная PS4 не проверялась. Поведение `INT_SEL=2` на железе не подтверждено: это
-  стандартное «прерывание после подтверждения записи», но у меня нет эталона, что
-  именно эмитит Sony Gnm для `writeAtEndOfPipe`.
+- Реальная PS4 не проверялась. Какой `INT_SEL` эмитит Sony Gnm для
+  `writeAtEndOfPipe` и даёт ли 3 прерывание на железе, не установлено.
 - Одна ревизия shadPS4. Многие находки (диалоги, конфиг) завязаны на `dade3af` и
   могут измениться.
 - lavapipe — это CPU-рендеринг, но shadPS4 всё равно ведёт RT через свой texture
@@ -142,14 +139,13 @@ shadPS4:
 1. Не показывать «Save Migration», если старых сейвов и трофеев нет (блокирует CI).
 2. Гостевой `exit(status)`: чистое завершение с кодом вместо `UNREACHABLE`.
 3. Headless-путь: ветка `CreateSurface` для `WindowSystemType::Headless` (`VK_EXT_headless_surface`).
-4. `EVENT_WRITE_EOP INT_SEL=3`: обрабатывать вместо `UNREACHABLE`.
+4. `EVENT_WRITE_EOP INT_SEL=3`: обрабатывать вместо `UNREACHABLE`, как уже делает
+   `RELEASE_MEM` (готовый патч: `shadps4-open-test/patches/shadps4/`).
 5. `building-linux.md`: для Ubuntu 24.04 упомянуть `libstdc++-14-dev` и `clang-tools-19`.
 
 opengnm:
 
-6. EOP `INT_SEL=3` → значение, которое встречается в играх (`drawcommandbuffer.c:1750`, `:2030`).
-   В форке исправлено (`9a2a77a`), осталось отдать в `PS4-OpenGNM/opengnm`.
-7. Документировать или разорвать зависимость `platform_orbis.o` от `libSceVideoOut`.
+6. Документировать или разорвать зависимость `platform_orbis.o` от `libSceVideoOut`.
 
 opengnm-psbc:
 

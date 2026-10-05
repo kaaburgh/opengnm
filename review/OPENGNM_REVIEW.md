@@ -20,9 +20,9 @@
 > `kaaburgh/shadps4-open-test` собран и прогнан на shadPS4 `dade3af` с lavapipe:
 > PASS, негативные контроли дают FAIL. Подробности, патчи и логи:
 > [SHADPS4_LAVAPIPE_BASELINE.md](SHADPS4_LAVAPIPE_BASELINE.md). По итогам прогона
-> добавлен блокер [B6](#-b6-event_write_eop-с-int_sel3-роняет-shadps4) (EOP с
-> `INT_SEL=3` роняет shadPS4) и уточнён B4: на shadPS4 бит предикации сейчас
-> игнорируется. Ошибка линковки без `-lSceVideoOut` из ответа про `gpu_solid_rt`
+> добавлена находка [B6](#-b6-event_write_eop-с-int_sel3-роняет-shadps4) (EOP с
+> `INT_SEL=3` роняет shadPS4; по итогам ревью PR это пробел shadPS4, а не баг
+> OpenGNM) и уточнён B4: на shadPS4 бит предикации сейчас игнорируется. Ошибка линковки без `-lSceVideoOut` из ответа про `gpu_solid_rt`
 > подтвердилась.
 
 ---
@@ -276,7 +276,7 @@ flags.predication_enabled=1  PKT3 header=0xc0012d01 predicate_bit=1
 Без этого единственные доступные шейдеры — встроенные (fullscreen VS и dummy
 PS), а они проходят через B1.
 
-### 🔴 B6. `EVENT_WRITE_EOP` с `INT_SEL=3` роняет shadPS4
+### 🟠 B6. `EVENT_WRITE_EOP` с `INT_SEL=3` роняет shadPS4 (пробел shadPS4, не баг OpenGNM)
 
 `src/drawcommandbuffer.c:1750` (`sceGnmDrawCmdEventWriteEop`) и `:2030`
 (`writeZpassDoneEop`, occlusion query)
@@ -287,9 +287,10 @@ PS), а они проходят через B1.
 - opengnm при любой записи данных ставит в EOP
   `EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM)`, то есть `INT_SEL=3`
   (значение взято из Mesa).
-- shadPS4 (`pm4_cmds.h`, `SignalFence`) обрабатывает `INT_SEL` 0, 1 и 2, а 3
-  называет `IrqUndocumented`: в играх оно не встречается. На 3 срабатывает
-  `UNREACHABLE` → `Emulator::Shutdown()` + `int3`, эмулятор падает.
+- shadPS4 (`pm4_cmds.h`, `PM4CmdEventWriteEop::SignalFence`) обрабатывает
+  `INT_SEL` 0, 1 и 2, а 3 называет `IrqUndocumented`. На 3 срабатывает
+  `UNREACHABLE` → `Emulator::Shutdown()` + `int3`, эмулятор падает. При этом
+  обработчик `RELEASE_MEM` в том же файле значение 3 уже принимает (как 2).
 - Данные метки при этом успевают записаться **до** падения. Тест увидел метку и
   напечатал PASS в гонке с крашем (`<Critical> SignalFence: Unreachable code!`
   стоит в логе раньше `SHADTEST ... PASS`). Это ложно-зелёный результат: при
@@ -297,18 +298,23 @@ PS), а они проходят через B1.
 - Под удар попадает любой тест, который ждёт GPU через
   `sceGnmDrawCmdEventWriteEop` или использует occlusion query.
 
-**Статус: исправлено в форке**, коммит `9a2a77a` в этой ветке. Оба места
-переведены на `INT_SEL=2`, host-тесты проверяют литеральное значение поля (при
-возврате к 3 они падают). `kaaburgh/shadps4-open-test` закрепил этот коммит в
-`deps.lock`.
+**Статус и вывод после ревью PR.** Первая попытка (`9a2a77a`) меняла в OpenGNM
+`INT_SEL` на 2 и откачена (`git revert`). Ревью справедливо указало, что это не
+равнозначная замена: `INT_SEL=2` — `SEND_INT_ON_CONFIRM`, `INT_SEL=3` —
+`SEND_DATA_ON_CONFIRM` (freegnm, `gnm/chip_util.h`). Значит, правка добавляла
+прерывание GfxEop к каждой записи метки и к occlusion query, а успешный прогон
+доказывал лишь, что эмулятор принимает 2, но не то, что так делает GNM. Снимка
+пакетов с реальной PS4 нет, а freegnm в том же хелпере использует 3. Тестовая
+нагрузка для эмулятора не должна подгонять гостевой PM4 под пробел эмулятора.
 
-**Рекомендация.** Эмитить значение, которое встречается в реальных командных
-потоках. Проверено: с `INT_SEL=2` (прерывание после подтверждения записи) тест
-даёт 3 из 3 PASS без `Critical`
-([patches/opengnm-eop-int-sel.patch](patches/opengnm-eop-int-sel.patch), там
-исправлено только место в `EventWriteEop`). Какое именно значение эмитит Sony Gnm
-для `writeAtEndOfPipe`, без железа не подтверждено. В shadPS4 стоит отдельно
-сделать обработку 3 вместо краша.
+**Рекомендация.** Оставить OpenGNM как есть и исправить shadPS4: в
+`EVENT_WRITE_EOP` обрабатывать 3 так же, как это уже делает его `RELEASE_MEM`.
+Двухстрочный патч лежит в `kaaburgh/shadps4-open-test`
+(`patches/shadps4/0001-pm4-handle-EVENT_WRITE_EOP-INT_SEL-3-like-RELEASE_ME.patch`).
+Проверено: с ним `gpu_solid_rt` (upstream OpenGNM `4b295ca`) даёт 3 из 3 PASS без
+`Critical`. На стоковом `dade3af` runner теперь честно возвращает инфраструктурную
+ошибку вместо ложного PASS. Даёт ли 3 прерывание на настоящем железе, не
+установлено: патч просто повторяет существующее соглашение shadPS4 для `RELEASE_MEM`.
 
 ### 🟠 I1. Лицензия и происхождение кода
 
@@ -523,7 +529,7 @@ context/SH/uconfig-регистр или сырой PM4-пакет. Нет се�
 | 3 | Не определять экспорты `libSceGnmDriver` в orbis-сборке; переименовать собственный API в `ognm*` | B2 | 🔴 |
 | 4 | Добавить `prepareFlip` и пример `SubmitAndFlip`; исправить `rendering-pipeline.md` и `hardware-smoke.md` | B3 | 🔴 |
 | 5 | OSS-путь к шейдерам: `llvm-mc`/psbc и генератор футера `OrbShdr` | B5 | 🔴 |
-| 5a | ~~EOP: заменить `INT_SEL=3` в `EventWriteEop` и `writeZpassDoneEop`~~ исправлено в `9a2a77a` | B6 | ✅ |
+| 5a | EOP `INT_SEL=3`: OpenGNM не трогать; отдать в shadPS4 обработку 3 в `EVENT_WRITE_EOP` (патч в `shadps4-open-test/patches/shadps4/`) | B6 | 🟠 |
 | 6 | Решение по лицензии, SPDX, NOTICE, документирование происхождения | I1 | 🟠 |
 | 7 | Дифференциальные тесты против HLE shadPS4; убрать тавтологичные проверки | I2 | 🟠 |
 | 8 | Липкий флаг ошибки в командном буфере, обработчик сообщений по умолчанию | I3 | 🟠 |
