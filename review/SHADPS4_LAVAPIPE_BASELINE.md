@@ -17,7 +17,13 @@
   ([logs/controls.log](logs/controls.log)):
   - readback выключен (дефолтный конфиг shadPS4) → `FAIL reason=pixel_mismatch got=00000000`;
   - фрагментный шейдер пишет красный вместо белого → `FAIL ... got=ff0000ff`.
-- Чтобы дойти до PASS, понадобилось 11 исправлений в пяти местах (см. таблицу ниже).
+- Чтобы дойти до PASS, понадобилось 12 исправлений в пяти местах (см. таблицу ниже).
+- **Всё внесено в репозитории.** Исправление opengnm — коммит `9a2a77a` в ветке
+  `claude/magical-ride-7m5mrn` форка `kaaburgh/opengnm`. Изменения теста — ветка
+  `claude/magical-ride-7m5mrn` в `kaaburgh/shadps4-open-test`, где `deps.lock`
+  указывает на этот коммит форка. Проверено со свежего клона: bootstrap за 137 с,
+  сборка, 2 из 2 PASS без `Critical`. Файлы в [patches/](patches/) остались как
+  исторический срез.
   Ни одно из них не требует отладки GPU: это сборка, формат файлов, конфиг и
   модальные диалоги. Два найденных бага блокируют автоматический запуск в shadPS4
   upstream, один — в opengnm.
@@ -50,6 +56,7 @@
 | 9 | окружение | сборка shadPS4 падает: `std::ranges::to`, `std::optional` не найдены; `CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND` | на Ubuntu 24.04 clang-19 по умолчанию берёт libstdc++ 13; для C++23-модулей CMake нужен `clang-scan-deps` | `libstdc++-14-dev`, `clang-tools-19` | документация shadPS4 (`building-linux.md` этого не упоминает) |
 | 10 | shadps4-open-test | (превентивно) | B4 из ревью (случайная предикация) и I3 (молча проглатываемые ошибки) | обнуление `cmd.flags`; обработчик сообщений opengnm и FAIL при его ошибках | этот репозиторий; B4 исправить в opengnm |
 | 11 | shadps4-open-test | маркер захватывает ANSI-хвост `\x1b[m` | лог shadPS4 цветной | runner вырезает ANSI перед разбором | этот репозиторий |
+| 12 | opengnm-psbc | на **свежем** клоне линковка psbc падает: `undefined reference to nir_intrinsic_infos`, `nir_op_infos`, `spirv_op_to_string`, … | списки исходников в Makefile строятся через `$(wildcard …)` при разборе, до кодогенерации, поэтому сгенерированные `.c` не компилируются. В рабочей копии это маскировал первый упавший запуск make | bootstrap сначала вызывает `make generated`, затем основную сборку. Найдено проверкой с чистого клона | psbc upstream (Makefile) |
 
 Про B4: на shadPS4 мусорный бит предикации **сейчас не влияет на результат**. В
 `liverpool.cpp` бит `predicate` у draw-пакетов не проверяется, а `SET_PREDICATION`
@@ -100,18 +107,18 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_CXX_COMPILER_CLANG_SCAN_DEPS=/usr/bin/clang-scan-deps-19
 cmake --build build --parallel "$(nproc)"
 
-# 3. Тест
-git clone https://github.com/kaaburgh/shadps4-open-test && cd shadps4-open-test
-git apply /path/to/review/patches/shadps4-open-test-lavapipe-baseline.patch
+# 3. Тест (ветка с исправлениями; deps.lock уже указывает на форк opengnm)
+git clone -b claude/magical-ride-7m5mrn https://github.com/kaaburgh/shadps4-open-test
+cd shadps4-open-test
 bash scripts/bootstrap-deps.sh
-git -C .deps/opengnm apply /path/to/review/patches/opengnm-eop-int-sel.patch
-make -C .deps/opengnm lib OO_PS4_TOOLCHAIN="$PWD/.deps/openorbis" CC=clang LD=ld.lld AR=llvm-ar
 bash scripts/build-test.sh gpu_solid_rt
 SHADPS4=/path/to/shadPS4/build/shadps4 bash scripts/run-test-lavapipe.sh gpu_solid_rt
 ```
 
-Правильнее вместо патча opengnm в `.deps` закрепить в `deps.lock` форк
-`kaaburgh/opengnm` с этим исправлением.
+`deps.lock` закрепляет коммит форка по SHA. GitHub отдаёт его, пока коммит достижим
+из какой-нибудь ветки. Если ветку `claude/magical-ride-7m5mrn` форка удалить или
+сквошнуть при мерже, SHA станет недостижимым, поэтому `9a2a77a` стоит влить в
+`main` форка.
 
 ## Что не проверено
 
@@ -141,9 +148,10 @@ shadPS4:
 opengnm:
 
 6. EOP `INT_SEL=3` → значение, которое встречается в играх (`drawcommandbuffer.c:1750`, `:2030`).
+   В форке исправлено (`9a2a77a`), осталось отдать в `PS4-OpenGNM/opengnm`.
 7. Документировать или разорвать зависимость `platform_orbis.o` от `libSceVideoOut`.
 
 opengnm-psbc:
 
-8. Makefile: генерировать все выходы кодогенерации Mesa; x86_64-сборка без `blake3_neon.c`;
-   Linux-конфиг без `_XOPEN_SOURCE=500`.
+8. Makefile: генерировать все выходы кодогенерации Mesa и делать это до раскрытия
+   `$(wildcard)`; x86_64-сборка без `blake3_neon.c`; Linux-конфиг без `_XOPEN_SOURCE=500`.
