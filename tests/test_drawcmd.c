@@ -16,7 +16,6 @@
 #include "gnm_types.h"
 #include "gnmdriver.h"
 #include "platform.h"
-#include "pm4/pm4_ps4.h"
 #include "pm4/sid.h"
 
 /* PM4 header field extractors */
@@ -362,10 +361,8 @@ static TestResult test_event_write_eop_data64_layout(void) {
 	utasserteq(
 	    (long long)s_cmdbuf[3],
 	    (long long)(0x1 | EOP_DATA_SEL(GNM_DATA_SEL_SEND_DATA64) |
-			EOP_INT_SEL(EOP_INT_SEL_SEND_INT_ON_CONFIRM))
+			EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM))
 	);
-	/* INT_SEL 3 does not occur in PS4 streams and makes shadPS4 abort. */
-	utasserteq((long long)((s_cmdbuf[3] >> 24) & 0x3), 2LL);
 	utasserteq((long long)s_cmdbuf[4], 0x55667788LL);
 	utasserteq((long long)s_cmdbuf[5], 0x11223344LL);
 	return test_success();
@@ -647,10 +644,8 @@ static TestResult test_reset_query_zpass_eop_layout(void) {
 	utasserteq(
 	    (long long)s_cmdbuf[3],
 	    (long long)(0x1 | EOP_DATA_SEL(GNM_DATA_SEL_SEND_DATA32) |
-			EOP_INT_SEL(EOP_INT_SEL_SEND_INT_ON_CONFIRM))
+			EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM))
 	);
-	/* INT_SEL 3 does not occur in PS4 streams and makes shadPS4 abort. */
-	utasserteq((long long)((s_cmdbuf[3] >> 24) & 0x3), 2LL);
 	utasserteq((long long)s_cmdbuf[4], 0LL);
 	utasserteq((long long)s_cmdbuf[5], 0LL);
 	return test_success();

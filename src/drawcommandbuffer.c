@@ -1747,7 +1747,7 @@ void sceGnmDrawCmdEventWriteEop(
 
 	uint32_t sel = EOP_DST_SEL(EOP_DST_SEL_MEM) | EOP_DATA_SEL(datasel);
 	if (datasel != GNM_DATA_SEL_DISCARD)
-		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_INT_ON_CONFIRM);
+		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
 
 	cmd->cmdptr[0] = PKT3(PKT3_EVENT_WRITE_EOP, 4, 0);
 	cmd->cmdptr[1] =
@@ -2027,7 +2027,7 @@ static void writeZpassDoneEop(
 
 	const uint32_t sel = EOP_DST_SEL(EOP_DST_SEL_MEM) |
 	                     EOP_DATA_SEL(GNM_DATA_SEL_SEND_DATA32) |
-	                     EOP_INT_SEL(EOP_INT_SEL_SEND_INT_ON_CONFIRM);
+	                     EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
 
 	cmd->cmdptr[0] = PKT3(PKT3_EVENT_WRITE_EOP, 4, 0);
 	cmd->cmdptr[1] =
