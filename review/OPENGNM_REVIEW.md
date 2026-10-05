@@ -290,7 +290,8 @@ PS), а они проходят через B1.
 - shadPS4 (`pm4_cmds.h`, `PM4CmdEventWriteEop::SignalFence`) обрабатывает
   `INT_SEL` 0, 1 и 2, а 3 называет `IrqUndocumented`. На 3 срабатывает
   `UNREACHABLE` → `Emulator::Shutdown()` + `int3`, эмулятор падает. При этом
-  обработчик `RELEASE_MEM` в том же файле значение 3 уже принимает (как 2).
+  обработчик `RELEASE_MEM` в том же файле значение 3 принимает, но трактует как 2
+  (с прерыванием), что, вероятно, тоже неточно.
 - Данные метки при этом успевают записаться **до** падения. Тест увидел метку и
   напечатал PASS в гонке с крашем (`<Critical> SignalFence: Unreachable code!`
   стоит в логе раньше `SHADTEST ... PASS`). Это ложно-зелёный результат: при
@@ -308,13 +309,15 @@ PS), а они проходят через B1.
 нагрузка для эмулятора не должна подгонять гостевой PM4 под пробел эмулятора.
 
 **Рекомендация.** Оставить OpenGNM как есть и исправить shadPS4: в
-`EVENT_WRITE_EOP` обрабатывать 3 так же, как это уже делает его `RELEASE_MEM`.
-Двухстрочный патч лежит в `kaaburgh/shadps4-open-test`
-(`patches/shadps4/0001-pm4-handle-EVENT_WRITE_EOP-INT_SEL-3-like-RELEASE_ME.patch`).
+`EVENT_WRITE_EOP` принимать 3 как запись данных после подтверждения **без**
+прерывания. Именно так это значение описано в Mesa RADV (`si_cmd_buffer.c`,
+18.3/19.3): «Wait for write confirmation before writing data, but don't send an
+interrupt». Копировать обработку `RELEASE_MEM` (3 как 2) не нужно: она добавила бы
+прерывание, о котором гость не просил. Патч лежит в `kaaburgh/shadps4-open-test`
+(`patches/shadps4/0001-pm4-accept-EVENT_WRITE_EOP-INT_SEL-3-without-raising.patch`).
 Проверено: с ним `gpu_solid_rt` (upstream OpenGNM `4b295ca`) даёт 3 из 3 PASS без
 `Critical`. На стоковом `dade3af` runner теперь честно возвращает инфраструктурную
-ошибку вместо ложного PASS. Даёт ли 3 прерывание на настоящем железе, не
-установлено: патч просто повторяет существующее соглашение shadPS4 для `RELEASE_MEM`.
+ошибку вместо ложного PASS.
 
 ### 🟠 I1. Лицензия и происхождение кода
 

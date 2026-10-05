@@ -51,7 +51,7 @@
 | 5 | shadps4-open-test | прогон висит, если используется только `config.toml` | shadPS4 `dade3af` читает `config.json`; при одном старом TOML показывает модальный SDL-диалог «Config Migration» | runner пишет `config.json` (`GPU.readbacks_mode=2`, `GPU.readback_linear_images_enabled=true`) | этот репозиторий |
 | 6 | **shadPS4** | первый запуск в свежем каталоге пользователя висит бесконечно | `UserSettings.Load()` → `UserManager::CreateDefaultUsers()` (`user_manager.cpp:300`) → `AskMigrationOption()` показывает модальный «Save Migration» **безусловно**, даже когда мигрировать нечего; наличие старых сейвов проверяется только после диалога | runner заранее создаёт `home/1000/{savedata,trophy,inputs}` | **shadPS4 upstream**: спрашивать, только если старые сейвы или трофеи существуют |
 | 7 | shadps4-open-test | shadPS4: `SearchBinaryInfo: Unreachable code! Shader binary info not found.` | тест копировал в GPU-память только код шейдера, без идущего следом футера `OrbShdr` (`ShaderBinaryInfo`), а shadPS4 ищет его рядом с кодом | `load_shader` копирует код вместе с футером, если тот идёт сразу за ним | этот репозиторий |
-| 8 | **shadPS4** | shadPS4: `SignalFence: Unreachable code!` (`pm4_cmds.h:508`), эмулятор падает (`int3`); PASS успевал выйти **в гонке** с падением | `sceGnmDrawCmdEventWriteEop` ставит `INT_SEL=3` (`SEND_DATA_ON_CONFIRM`); обработчик `EVENT_WRITE_EOP` в shadPS4 знает только 0/1/2, хотя `RELEASE_MEM` значение 3 принимает | первая попытка меняла OpenGNM на `INT_SEL=2` (`SEND_INT_ON_CONFIRM`, добавляет прерывание) и откачена по ревью. Итог: патч shadPS4 `shadps4-open-test/patches/shadps4/` + runner отвергает `<Critical>` до маркера (код 2) | **shadPS4 upstream** |
+| 8 | **shadPS4** | shadPS4: `SignalFence: Unreachable code!` (`pm4_cmds.h:508`), эмулятор падает (`int3`); PASS успевал выйти **в гонке** с падением | `sceGnmDrawCmdEventWriteEop` ставит `INT_SEL=3` (`SEND_DATA_ON_CONFIRM`); обработчик `EVENT_WRITE_EOP` в shadPS4 знает только 0/1/2, хотя `RELEASE_MEM` значение 3 принимает (как прерывание, что тоже под вопросом) | первая попытка меняла OpenGNM на `INT_SEL=2` (`SEND_INT_ON_CONFIRM`, добавляет прерывание) и откачена по ревью. Итог: патч shadPS4 `shadps4-open-test/patches/shadps4/` (3 = запись после подтверждения, без IRQ, как в Mesa RADV) + runner отвергает `<Critical>` до маркера (код 2) | **shadPS4 upstream** |
 | 9 | окружение | сборка shadPS4 падает: `std::ranges::to`, `std::optional` не найдены; `CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS-NOTFOUND` | на Ubuntu 24.04 clang-19 по умолчанию берёт libstdc++ 13; для C++23-модулей CMake нужен `clang-scan-deps` | `libstdc++-14-dev`, `clang-tools-19` | документация shadPS4 (`building-linux.md` этого не упоминает) |
 | 10 | shadps4-open-test | (превентивно) | B4 из ревью (случайная предикация) и I3 (молча проглатываемые ошибки) | обнуление `cmd.flags`; обработчик сообщений opengnm и FAIL при его ошибках | этот репозиторий; B4 исправить в opengnm |
 | 11 | shadps4-open-test | маркер захватывает ANSI-хвост `\x1b[m` | лог shadPS4 цветной | runner вырезает ANSI перед разбором | этот репозиторий |
@@ -139,8 +139,9 @@ shadPS4:
 1. Не показывать «Save Migration», если старых сейвов и трофеев нет (блокирует CI).
 2. Гостевой `exit(status)`: чистое завершение с кодом вместо `UNREACHABLE`.
 3. Headless-путь: ветка `CreateSurface` для `WindowSystemType::Headless` (`VK_EXT_headless_surface`).
-4. `EVENT_WRITE_EOP INT_SEL=3`: обрабатывать вместо `UNREACHABLE`, как уже делает
-   `RELEASE_MEM` (готовый патч: `shadps4-open-test/patches/shadps4/`).
+4. `EVENT_WRITE_EOP INT_SEL=3`: принимать как запись без прерывания вместо
+   `UNREACHABLE` (готовый патч: `shadps4-open-test/patches/shadps4/`). Заодно стоит
+   проверить `RELEASE_MEM`, где 3 сейчас трактуется как прерывание.
 5. `building-linux.md`: для Ubuntu 24.04 упомянуть `libstdc++-14-dev` и `clang-tools-19`.
 
 opengnm:
