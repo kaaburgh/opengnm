@@ -1,0 +1,17 @@
+# Run with unpatched opengnm 4b295ca (EOP INT_SEL=3): PASS printed after shadPS4 hit UNREACHABLE
+183:[Debug] <Critical> (shadPS4:GpuComm) pm4_cmds.h:508 SignalFence: Unreachable code!
+185:[Tty] <Info> (Game:Main) logger.cpp:62 log_flush: [stdout] SHADTEST name=gpu_solid_rt status=PASS samples=16 expected=ffffffff pitch=64 rt_bytes=16384 dcb_bytes=1524
+188:HOST_RESULT SHADTEST name=gpu_solid_rt status=PASS samples=16 expected=ffffffff pitch=64 rt_bytes=16384 dcb_bytes=1524
+
+# Negative control 1: readbacks disabled (shadPS4 defaults)
+[Config] <Info> (shadPS4:Main) emulator.cpp:488 Run: GPU readbacksMode: 0
+[Tty] <Info> (Game:Main) logger.cpp:62 log_flush: [stdout] SHADTEST name=gpu_solid_rt status=FAIL reason=pixel_mismatch x=8 y=8 got=00000000 pitch=64
+[Debug] <Critical> (Game:Main) process.cpp:296 exit: Unreachable code!
+Exiting with status code 1
+
+# Negative control 2: fragment shader writes red instead of white
+HOST_RESULT SHADTEST name=gpu_solid_rt status=FAIL reason=pixel_mismatch x=8 y=8 got=ff0000ff pitch=64
+
+# SDL offscreen (no X server)
+[Render.Vulkan] <Critical> (shadPS4:Main) vk_platform.cpp:120 CreateSurface: Presentation not supported on this platform
+[Debug] <Critical> (shadPS4:Main) vk_platform.cpp:121 CreateSurface: Unreachable code!

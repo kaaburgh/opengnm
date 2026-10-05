@@ -1,0 +1,184 @@
+using isolated shadPS4 config: $WORK/sot/out/gpu_solid_rt/xdg-data/shadPS4/config.json
+oracle settings: readbacksMode=Precise, readbackLinearImages=true
+[Debug] <Info> (shadps4) main.cpp:154 main: Run: $WORK/shadPS4/build/shadps4 $WORK/sot/out/gpu_solid_rt/gpu_solid_rt.elf
+[Loader] <Info> (shadPS4:Main) emulator.cpp:457 Run: No splash image found at /app0/sce_sys/pic1.png
+[Loader] <Info> (shadPS4:Main) emulator.cpp:465 Run: Starting shadps4 emulator v0.19.1 WIP 
+[Loader] <Info> (shadPS4:Main) emulator.cpp:466 Run: Revision dade3afda7ea3102faad8e39e616556a9cdde90b
+[Loader] <Info> (shadPS4:Main) emulator.cpp:467 Run: Branch HEAD
+[Loader] <Info> (shadPS4:Main) emulator.cpp:468 Run: Description dade3af
+[Loader] <Info> (shadPS4:Main) emulator.cpp:469 Run: Remote https://github.com/shadps4-emu/shadPS4
+[Config] <Info> (shadPS4:Main) emulator.cpp:472 Run: Game-specific config used: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:474 Run: General isNeo: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:475 Run: General isDevKit: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:476 Run: General isConnectedToNetwork: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:477 Run: General isShadNetEnabled: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:482 Run: Log sync: true
+[Config] <Info> (shadPS4:Main) emulator.cpp:483 Run: Log skipDuplicate: true
+[Config] <Info> (shadPS4:Main) emulator.cpp:487 Run: GPU isNullGpu: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:488 Run: GPU readbacksMode: 2
+[Config] <Info> (shadPS4:Main) emulator.cpp:490 Run: GPU readbackLinearImages: true
+[Config] <Info> (shadPS4:Main) emulator.cpp:491 Run: GPU directMemoryAccess: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:492 Run: GPU shouldDumpShaders: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:493 Run: GPU vblankFrequency: 60
+[Config] <Info> (shadPS4:Main) emulator.cpp:494 Run: GPU shouldCopyGPUBuffers: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:496 Run: GPU userfaultfdTracking: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:498 Run: GPU inlineFetchShader: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:499 Run: Vulkan gpuId: -1
+[Config] <Info> (shadPS4:Main) emulator.cpp:500 Run: Vulkan vkValidation: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:501 Run: Vulkan vkValidationCore: true
+[Config] <Info> (shadPS4:Main) emulator.cpp:502 Run: Vulkan vkValidationSync: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:503 Run: Vulkan vkValidationGpu: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:504 Run: Vulkan crashDiagnostics: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:505 Run: Vulkan hostMarkers: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:506 Run: Vulkan guestMarkers: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:507 Run: Vulkan rdocEnable: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:508 Run: Vulkan PipelineCacheEnabled: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:510 Run: Vulkan PipelineCacheArchived: false
+[Config] <Info> (shadPS4:Main) emulator.cpp:516 Run: CPU Model: Intel(R) Xeon(R) Processor @ 2.10GHz
+[Config] <Info> (shadPS4:Main) emulator.cpp:518 Run: CPU Physical Cores: 4, Logical Cores: 4
+[Config] <Info> (shadPS4:Main) emulator.cpp:520 Run: Total RAM: 16 GB
+[Config] <Info> (shadPS4:Main) emulator.cpp:521 Run: Operating System: Ubuntu 24.04.4 LTS
+[Kernel.Vmm] <Info> (shadPS4:Main) address_space.cpp:690 Impl: System managed virtual memory region: 0x400000 - 0x7ffffbfff
+[Kernel.Vmm] <Info> (shadPS4:Main) address_space.cpp:693 Impl: System reserved virtual memory region: 0x7ffffc000 - 0xfffffffff
+[Kernel.Vmm] <Info> (shadPS4:Main) address_space.cpp:695 Impl: User virtual memory region: 0x1000000000 - 0x54ffffffffff
+[Kernel.Vmm] <Info> (shadPS4:Main) memory.cpp:19 MemoryManager: Virtual memory space initialized with regions:
+[Kernel.Vmm] <Info> (shadPS4:Main) memory.cpp:27 MemoryManager: 0x400000 - 0x550000000000
+[Common.Filesystem] <Warning> (shadPS4:Main) emulator.cpp:148 ExtractTrophies: Failed to load npbind.dat file
+error: XDG_RUNTIME_DIR is invalid or not set in the environment.
+[Core] <Warning> (shadPS4:Main) sdl_window.cpp:197 SetIcon: No window icon data available, using default icon.
+[Loader] <Warning> (shadPS4:Main) emulator.cpp:665 Run: No dumped system fonts, expect missing text or instability
+[Lib.Kernel] <Info> (shadPS4:Main) libs.cpp:111 InitHLELibs: Initializing HLE libraries
+[Lib.GnmDriver] <Info> (shadPS4:Main) gnmdriver.cpp:2921 RegisterLib: Initializing presenter
+[Render.Vulkan] <Info> (shadPS4:Main) vk_platform.cpp:259 CreateInstance: Creating vulkan instance
+[Render.Vulkan] <Info> (shadPS4:Main) vk_platform.cpp:301 CreateInstance: Enabled instance extensions: VK_KHR_xlib_surface, VK_KHR_surface, VK_EXT_debug_utils
+[Render.Vulkan] <Info> (shadPS4:Main) vk_platform.cpp:302 CreateInstance: Enabled instance layers: 
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:106 Instance: Found 1 physical devices
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:666 CollectDeviceParameters: GPU_Vendor: llvmpipe
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:667 CollectDeviceParameters: GPU_Model: llvmpipe (LLVM 20.1.2, 256 bits)
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:668 CollectDeviceParameters: GPU_Integrated: No
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:669 CollectDeviceParameters: GPU_Vulkan_Driver: llvmpipe 25.2.8
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:670 CollectDeviceParameters: GPU_Vulkan_Version: 1.4.318
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:671 CollectDeviceParameters: GPU_Vulkan_Extensions: VK_KHR_8bit_storage, VK_KHR_16bit_storage, VK_KHR_acceleration_structure, VK_KHR_bind_memory2, VK_KHR_buffer_device_address, VK_KHR_compute_shader_derivatives, VK_KHR_copy_commands2, VK_KHR_create_renderpass2, VK_KHR_dedicated_allocation, VK_KHR_deferred_host_operations, VK_KHR_depth_stencil_resolve, VK_KHR_descriptor_update_template, VK_KHR_device_group, VK_KHR_draw_indirect_count, VK_KHR_driver_properties, VK_KHR_dynamic_rendering, VK_KHR_dynamic_rendering_local_read, VK_KHR_external_fence, VK_KHR_external_memory, VK_KHR_external_memory_fd, VK_KHR_external_semaphore, VK_KHR_format_feature_flags2, VK_KHR_get_memory_requirements2, VK_KHR_global_priority, VK_KHR_image_format_list, VK_KHR_imageless_framebuffer, VK_KHR_incremental_present, VK_KHR_index_type_uint8, VK_KHR_line_rasterization, VK_KHR_load_store_op_none, VK_KHR_maintenance1, VK_KHR_maintenance2, VK_KHR_maintenance3, VK_KHR_maintenance4, VK_KHR_maintenance5, VK_KHR_maintenance6, VK_KHR_maintenance7, VK_KHR_maintenance8, VK_KHR_map_memory2, VK_KHR_multiview, VK_KHR_pipeline_library, VK_KHR_push_descriptor, VK_KHR_ray_query, VK_KHR_ray_tracing_maintenance1, VK_KHR_ray_tracing_pipeline, VK_KHR_ray_tracing_position_fetch, VK_KHR_relaxed_block_layout, VK_KHR_sampler_mirror_clamp_to_edge, VK_KHR_sampler_ycbcr_conversion, VK_KHR_separate_depth_stencil_layouts, VK_KHR_shader_atomic_int64, VK_KHR_shader_clock, VK_KHR_shader_draw_parameters, VK_KHR_shader_expect_assume, VK_KHR_shader_float16_int8, VK_KHR_shader_float_controls, VK_KHR_shader_float_controls2, VK_KHR_shader_integer_dot_product, VK_KHR_shader_maximal_reconvergence, VK_KHR_shader_non_semantic_info, VK_KHR_shader_quad_control, VK_KHR_shader_relaxed_extended_instruction, VK_KHR_shader_subgroup_extended_types, VK_KHR_shader_subgroup_rotate, VK_KHR_shader_terminate_invocation, VK_KHR_spirv_1_4, VK_KHR_storage_buffer_storage_class, VK_KHR_swapchain, VK_KHR_swapchain_mutable_format, VK_KHR_synchronization2, VK_KHR_timeline_semaphore, VK_KHR_uniform_buffer_standard_layout, VK_KHR_variable_pointers, VK_KHR_vertex_attribute_divisor, VK_KHR_vulkan_memory_model, VK_KHR_workgroup_memory_explicit_layout, VK_KHR_zero_initialize_workgroup_memory, VK_EXT_4444_formats, VK_EXT_attachment_feedback_loop_dynamic_state, VK_EXT_attachment_feedback_loop_layout, VK_EXT_border_color_swizzle, VK_EXT_calibrated_timestamps, VK_EXT_color_write_enable, VK_EXT_conditional_rendering, VK_EXT_custom_border_color, VK_EXT_depth_bias_control, VK_EXT_depth_clip_control, VK_EXT_depth_clip_enable, VK_EXT_depth_range_unrestricted, VK_EXT_descriptor_buffer, VK_EXT_descriptor_indexing, VK_EXT_device_generated_commands, VK_EXT_dynamic_rendering_unused_attachments, VK_EXT_extended_dynamic_state, VK_EXT_extended_dynamic_state2, VK_EXT_extended_dynamic_state3, VK_EXT_external_memory_dma_buf, VK_EXT_external_memory_host, VK_EXT_fragment_shader_interlock, VK_EXT_graphics_pipeline_library, VK_EXT_hdr_metadata, VK_EXT_host_image_copy, VK_EXT_host_query_reset, VK_EXT_image_2d_view_of_3d, VK_EXT_image_robustness, VK_EXT_image_sliced_view_of_3d, VK_EXT_index_type_uint8, VK_EXT_inline_uniform_block, VK_EXT_legacy_vertex_attributes, VK_EXT_line_rasterization, VK_EXT_load_store_op_none, VK_EXT_memory_budget, VK_EXT_memory_priority, VK_EXT_mesh_shader, VK_EXT_multi_draw, VK_EXT_multisampled_render_to_single_sampled, VK_EXT_mutable_descriptor_type, VK_EXT_nested_command_buffer, VK_EXT_non_seamless_cube_map, VK_EXT_pageable_device_local_memory, VK_EXT_pipeline_creation_cache_control, VK_EXT_pipeline_creation_feedback, VK_EXT_pipeline_library_group_handles, VK_EXT_pipeline_protected_access, VK_EXT_pipeline_robustness, VK_EXT_post_depth_coverage, VK_EXT_primitive_topology_list_restart, VK_EXT_primitives_generated_query, VK_EXT_private_data, VK_EXT_provoking_vertex, VK_EXT_queue_family_foreign, VK_EXT_rasterization_order_attachment_access, VK_EXT_robustness2, VK_EXT_sampler_filter_minmax, VK_EXT_scalar_block_layout, VK_EXT_separate_stencil_usage, VK_EXT_shader_atomic_float, VK_EXT_shader_atomic_float2, VK_EXT_shader_demote_to_helper_invocation, VK_EXT_shader_image_atomic_int64, VK_EXT_shader_object, VK_EXT_shader_replicated_composites, VK_EXT_shader_stencil_export, VK_EXT_shader_subgroup_ballot, VK_EXT_shader_subgroup_vote, VK_EXT_shader_viewport_index_layer, VK_EXT_subgroup_size_control, VK_EXT_swapchain_maintenance1, VK_EXT_texel_buffer_alignment, VK_EXT_tooling_info, VK_EXT_transform_feedback, VK_EXT_vertex_attribute_divisor, VK_EXT_vertex_input_dynamic_state, VK_EXT_ycbcr_2plane_444_formats, VK_EXT_ycbcr_image_arrays, VK_EXT_zero_initialize_device_memory, VK_AMDX_shader_enqueue, VK_ANDROID_external_memory_android_hardware_buffer, VK_ARM_rasterization_order_attachment_access, VK_GOOGLE_decorate_string, VK_GOOGLE_hlsl_functionality1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:224 CreateDevice: Physical device subgroup size 8
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_KHR_swapchain
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_KHR_push_descriptor
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_vertex_attribute_divisor
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_robustness2
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_KHR_maintenance5
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_KHR_maintenance8
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_attachment_feedback_loop_layout
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_attachment_feedback_loop_dynamic_state
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_depth_range_unrestricted
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_extended_dynamic_state3
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:284 CreateDevice: - extendedDynamicState3ColorWriteMask: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_custom_border_color
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_depth_clip_control
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_depth_clip_enable
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_vertex_input_dynamic_state
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_primitive_topology_list_restart
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:298 CreateDevice: - primitiveTopologyListRestart: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:300 CreateDevice: - primitiveTopologyPatchListRestart: 1
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_AMD_shader_explicit_vertex_parameter unavailable.
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_KHR_fragment_shader_barycentric unavailable.
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_provoking_vertex
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_shader_stencil_export
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_AMD_shader_image_load_store_lod unavailable.
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_AMD_gcn_shader unavailable.
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_AMD_shader_trinary_minmax unavailable.
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_NV_framebuffer_mixed_samples unavailable.
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_AMD_mixed_attachment_samples unavailable.
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_shader_atomic_float
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_shader_atomic_float2
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:321 CreateDevice: - shaderBufferFloat32AtomicMinMax: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:323 CreateDevice: - shaderImageFloat32AtomicMinMax: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_KHR_workgroup_memory_explicit_layout
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:331 CreateDevice: - workgroupMemoryExplicitLayout: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:334 CreateDevice: - workgroupMemoryExplicitLayoutScalarBlockLayout: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:337 CreateDevice: - workgroupMemoryExplicitLayout16BitAccess: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_image_2d_view_of_3d
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:344 CreateDevice: - image2DViewOf3D: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:346 CreateDevice: - sampler2DViewOf3D: 1
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:243 lambda: Extension VK_EXT_image_view_min_lod unavailable.
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_EXT_memory_budget
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:238 lambda: Enabling extension: VK_KHR_shader_clock
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:354 CreateDevice: - shaderSubgroupClock: 1
+[Render.Vulkan] <Info> (shadPS4:Main) vk_instance.cpp:730 CollectImageFormatInfo: Block Texel View support: Yes
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=1, number_format=9 is not fully supported (vk_format=R8Srgb, missing features={ SampledImage | ColorAttachment | TransferSrc | TransferDst })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=3, number_format=9 is not fully supported (vk_format=R8G8Srgb, missing features={ SampledImage | ColorAttachment | TransferSrc | TransferDst })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=9, number_format=1 is not fully supported (vk_format=A2B10G10R10SnormPack32, missing features={ StorageImage | StorageReadWithoutFormat | StorageWriteWithoutFormat })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=9, number_format=5 is not fully supported (vk_format=A2B10G10R10SintPack32, missing features={ SampledImage | StorageImage | VertexBuffer | ColorAttachment | TransferSrc | TransferDst | StorageReadWithoutFormat | StorageWriteWithoutFormat })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=16, number_format=0 is not fully supported (vk_format=R5G6B5UnormPack16, missing features={ StorageImage | StorageReadWithoutFormat | StorageWriteWithoutFormat })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=17, number_format=0 is not fully supported (vk_format=A1R5G5B5UnormPack16, missing features={ StorageImage | StorageReadWithoutFormat | StorageWriteWithoutFormat })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=18, number_format=0 is not fully supported (vk_format=R5G5B5A1UnormPack16, missing features={ StorageImage | StorageReadWithoutFormat | StorageWriteWithoutFormat })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:740 CollectImageFormatInfo: Surface format data_format=19, number_format=0 is not fully supported (vk_format=B4G4R4A4UnormPack16, missing features={ StorageImage | StorageReadWithoutFormat | StorageWriteWithoutFormat })
+[Render.Vulkan] <Warning> (shadPS4:Main) vk_instance.cpp:750 CollectImageFormatInfo: Depth format z_format=1, stencil_format=1 is not fully supported (vk_format=D16UnormS8Uint, missing features={ DepthStencilAttachment })
+[Config] <Info> (shadPS4:Main) page_manager.cpp:459 PageManager: Memory tracking method: signals
+[Input] <Info> (shadPS4:Main) controller.cpp:276 TryOpenSDLControllers: 0 controllers are currently connected
+[NpHandler] <Info> (shadPS4:Main) np_handler.cpp:104 Initialize: shadNet disabled globally we are in offline mode
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:129 LoadModuleToMemory: Loading module gpu_solid_rt.elf to 0x400000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:142 LoadModuleToMemory: ======== Load Module to Memory ========
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:143 LoadModuleToMemory: base_virtual_addr ......: 0x0000000000400000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:144 LoadModuleToMemory: base_size ..............: 0x000000000002c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:145 LoadModuleToMemory: aligned_base_size ......: 0x000000000002c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:208 LoadModuleToMemory: program header = [0] type = Loadable
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:209 LoadModuleToMemory: segment_addr ..........: 0x0000000000400000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:210 LoadModuleToMemory: segment_file_size .....: 0x000000000001c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:211 LoadModuleToMemory: segment_memory_size ...: 0x000000000001c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:212 LoadModuleToMemory: segment_mode ..........: (R_X)
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:208 LoadModuleToMemory: program header = [1] type = SCE Read-Only After Relocation
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:209 LoadModuleToMemory: segment_addr ..........: 0x000000000041c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:210 LoadModuleToMemory: segment_file_size .....: 0x000000000000c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:211 LoadModuleToMemory: segment_memory_size ...: 0x000000000000c000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:212 LoadModuleToMemory: segment_mode ..........: (R__)
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:208 LoadModuleToMemory: program header = [2] type = Loadable
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:209 LoadModuleToMemory: segment_addr ..........: 0x0000000000428000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:210 LoadModuleToMemory: segment_file_size .....: 0x00000000000001d8
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:211 LoadModuleToMemory: segment_memory_size ...: 0x0000000000004000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:212 LoadModuleToMemory: segment_mode ..........: (RW_)
+[Core.Linker] <Error> (shadPS4:Main) module.cpp:279 LoadModuleToMemory: Unimplemented type Interpreter Path
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:250 LoadModuleToMemory: TLS virtual address = 0x41b5d0
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:251 LoadModuleToMemory: TLS image size      = 32
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:284 LoadModuleToMemory: program entry addr ..........: 0x00000000004125f8
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:358 LoadModuleToMemory: Static CPU patching for gpu_solid_rt.elf: 342 functions, 0 instructions patched in place, 0/0 short instructions relocated (0 left to the exception handler); outside functions: 0 patched in place, 0 left to the exception handler
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:496 LoadDynamicInfo: unsupported DT_SCE_IMPORT_LIB_ATTR value = ......: 0x0001000000000009
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:496 LoadDynamicInfo: unsupported DT_SCE_IMPORT_LIB_ATTR value = ......: 0x0002000000000009
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:496 LoadDynamicInfo: unsupported DT_SCE_IMPORT_LIB_ATTR value = ......: 0x0003000000000009
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:489 LoadDynamicInfo: DT_SCE_FINGERPRINT value = 0x0000000000000000
+[Core.Linker] <Info> (shadPS4:Main) module.cpp:512 LoadDynamicInfo: unsupported DT_SCE_MODULE_ATTR value = ..........: 0x0000000000000000
+[Core.Linker] <Info> (shadPS4:Main) linker.cpp:89 Execute: Can't Load libSceLibcInternal.sprx switching to HLE
+[Core.Linker] <Warning> (shadPS4:Main) linker.cpp:455 Resolve: Linker: Stub resolved Jahsnh4KKkg as madvise (lib: libkernel, mod: libkernel)
+[Core.Linker] <Warning> (shadPS4:Main) linker.cpp:455 Resolve: Linker: Stub resolved t0fXUzq61Z4 as _fcntl (lib: libkernel, mod: libkernel)
+[Core.Linker] <Warning> (shadPS4:Main) linker.cpp:455 Resolve: Linker: Stub resolved ku7D4q1Y9PI as poll (lib: libkernel, mod: libkernel)
+[Kernel.Vmm] <Info> (shadPS4:Main) memory.cpp:99 SetupMemoryRegions: Configured memory regions: flexible size = 0x1c000000, direct size = 0x120000000
+[Kernel.Vmm] <Info> (shadPS4:Main) memory.cpp:316 sceKernelMapNamedFlexibleMemory: in_addr = 0x881000000, len = 0x4000, prot = 0x3, flags = 0x0, name = 'SceKernelPrimaryTcbTls'
+[Kernel.Vmm] <Info> (shadPS4:Main) memory.cpp:346 sceKernelMapNamedFlexibleMemory: out_addr = 0x881000000
+[Core.Linker] <Error> (Game:Main) linker.cpp:230 LoadModule: Provided file /app0/sce_module/libSceFios2.prx does not exist
+[Lib.SysModule] <Error> (Game:Main) sysmodule_internal.cpp:145 loadModuleInternal: Failed to load game library /app0/sce_module/libSceFios2.prx
+[Core.Linker] <Error> (Game:Main) linker.cpp:230 LoadModule: Provided file /app0/sce_module/libc.prx does not exist
+[Lib.SysModule] <Error> (Game:Main) sysmodule_internal.cpp:145 loadModuleInternal: Failed to load game library /app0/sce_module/libc.prx
+[Loader] <Info> (Game:Main) sysmodule_internal.cpp:277 loadModuleInternal: Can't Load libSceRtc.sprx switching to HLE
+[Core.Linker] <Warning> (Game:Main) linker.cpp:455 Resolve: Linker: Stub resolved Jahsnh4KKkg as madvise (lib: libkernel, mod: libkernel)
+[Core.Linker] <Warning> (Game:Main) linker.cpp:455 Resolve: Linker: Stub resolved t0fXUzq61Z4 as _fcntl (lib: libkernel, mod: libkernel)
+[Core.Linker] <Warning> (Game:Main) linker.cpp:455 Resolve: Linker: Stub resolved ku7D4q1Y9PI as poll (lib: libkernel, mod: libkernel)
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:88 sceKernelAllocateDirectMemory: searchStart = 0x0, searchEnd = 0x120000000, len = 0x10000, alignment = 0x10000, memoryType = 0x3, physAddrOut = 0x0
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:203 sceKernelMapNamedDirectMemory: in_addr = 0xfe0000000, len = 0x10000, prot = 0x13, flags = 0x0, phys_addr = 0x0, alignment = 0x10000, name = 'SceGnmDriver'
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:255 sceKernelMapNamedDirectMemory: out_addr = 0xfe0000000
+[Tty] <Info> (Game:Main) logger.cpp:62 log_flush: [stdout] shadps4-open-test: gpu_solid_rt start
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:88 sceKernelAllocateDirectMemory: searchStart = 0x0, searchEnd = 0x120000000, len = 0x200000, alignment = 0x200000, memoryType = 0x3, physAddrOut = 0x200000
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:203 sceKernelMapNamedDirectMemory: in_addr = 0x0, len = 0x200000, prot = 0x33, flags = 0x0, phys_addr = 0x200000, alignment = 0x200000, name = 'anon'
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:255 sceKernelMapNamedDirectMemory: out_addr = 0x200000000
+[Kernel.Fs] <Info> (Game:Main) file_system.cpp:81 open: path = /app0/assets/fullscreen.vert.sb flags = 0x0 mode = 0
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:757 posix_mmap: called addr = 0x0, len = 0x4000, prot = 0x3, flags = 0x1002, fd = -1, phys_addr = 0x0
+[Kernel.Vmm] <Info> (Game:Main) memory.cpp:814 posix_mmap: addr_out = 0x200200000
+[Kernel.Fs] <Info> (Game:Main) file_system.cpp:288 close: Closing /app0/assets/fullscreen.vert.sb
+[Kernel.Fs] <Info> (Game:Main) file_system.cpp:81 open: path = /app0/assets/solid.frag.sb flags = 0x0 mode = 0
+[Kernel.Fs] <Info> (Game:Main) file_system.cpp:288 close: Closing /app0/assets/solid.frag.sb
+[Render.Vulkan] <Info> (shadPS4:GpuComm) vk_pipeline_cache.cpp:627 CompileModule: Compiling fs shader 0x1b436535300400be 
+[Render.Recompiler] <Warning> (shadPS4:GpuComm) recompiler.cpp:68 TranslateProgram: First instruction is not s_mov_b32 vcc_hi, #imm
+[Render.Vulkan] <Warning> (shadPS4:GpuComm) emit_spirv.cpp:467 lambda: Float32 denorm flushing is not supported by the GPU
+[Render.Vulkan] <Info> (shadPS4:GpuComm) vk_pipeline_cache.cpp:627 CompileModule: Compiling vs shader 0xec80f7caa261d7d0 
+[Render.Recompiler] <Warning> (shadPS4:GpuComm) recompiler.cpp:68 TranslateProgram: First instruction is not s_mov_b32 vcc_hi, #imm
+[Render.Vulkan] <Warning> (shadPS4:GpuComm) scalar_flow.cpp:17 EmitFlowControl: S_SETPRIO instruction!
+[Render.Vulkan] <Info> (shadPS4:GpuComm) vk_pipeline_cache.cpp:348 GetGraphicsPipeline: Compiling graphics pipeline 0x258fd6a41aed2c0
+[Tty] <Info> (Game:Main) logger.cpp:62 log_flush: [stdout] SHADTEST name=gpu_solid_rt status=PASS samples=16 expected=ffffffff pitch=64 rt_bytes=16384 dcb_bytes=1524
+HOST_RESULT SHADTEST name=gpu_solid_rt status=PASS samples=16 expected=ffffffff pitch=64 rt_bytes=16384 dcb_bytes=1524
