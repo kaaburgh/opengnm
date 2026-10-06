@@ -101,6 +101,27 @@ static TestResult test_helpers_resource_setup(void) {
 	return test_success();
 }
 
+static TestResult test_helpers_render_target_ignores_prior_contents(void) {
+	GnmRenderTargetCreateInfo info;
+	sceGnmRtInitColorTargetCreateInfo(
+	    &info, GNM_FMT_R8G8B8A8_UNORM, 64, 64, 1, 1, 1,
+	    GNM_TM_DISPLAY_LINEAR_ALIGNED, GNM_GPU_BASE
+	);
+
+	GnmRenderTarget clean;
+	memset(&clean, 0, sizeof(clean));
+	GnmError err = sceGnmCreateRenderTarget(&clean, &info);
+	utasserteq((long long)err, (long long)GNM_ERROR_OK);
+
+	// Callers commonly pass an uninitialized stack object.
+	GnmRenderTarget dirty;
+	memset(&dirty, 0xa5, sizeof(dirty));
+	err = sceGnmCreateRenderTarget(&dirty, &info);
+	utasserteq((long long)err, (long long)GNM_ERROR_OK);
+	utassert(memcmp(&clean, &dirty, sizeof(clean)) == 0);
+	return test_success();
+}
+
 static TestResult test_helpers_shader_metadata(void) {
 	enum {
 		kHeaderSize = sizeof(GnmShaderFileHeader),
@@ -215,6 +236,8 @@ int run_tests_helpers(void) {
 	    {test_helpers_videoout_invalid_create_info,
 	     "VideoOut invalid create-info diagnostics"},
 	    {test_helpers_resource_setup, "Resource setup helpers"},
+	    {test_helpers_render_target_ignores_prior_contents,
+	     "Render target ignores prior contents"},
 	    {test_helpers_shader_metadata, "Shader metadata helper"},
 		    {test_helpers_wrapped_shader_metadata, "Wrapped shader metadata helper"},
 		    {test_helpers_zero_input_fetch_shader, "Zero-input fetch shader"},
