@@ -101,6 +101,44 @@ static TestResult test_helpers_resource_setup(void) {
 	return test_success();
 }
 
+static TestResult test_helpers_render_target_ignores_prior_contents(void) {
+	// Linear, a thick tile mode (the thick check reads the requested mode),
+	// and CMASK fast clear (fills the CMASK slice and compression bits).
+	const struct {
+		GnmTileMode tilemode;
+		uint32_t numslices;
+		bool cmask;
+	} cases[] = {
+	    {GNM_TM_DISPLAY_LINEAR_ALIGNED, 1, false},
+	    {GNM_TM_THICK_1D_THICK, 4, false},
+	    {GNM_TM_THIN_2D_THIN, 1, true},
+	};
+	for (size_t k = 0; k < sizeof(cases) / sizeof(cases[0]); ++k) {
+		GnmRenderTargetCreateInfo info;
+		sceGnmRtInitColorTargetCreateInfo(
+		    &info, GNM_FMT_R8G8B8A8_UNORM, 64, 64, cases[k].numslices, 1,
+		    1, cases[k].tilemode, GNM_GPU_BASE
+		);
+		// 0 is single-sampled whichever way the count is read.
+		info.numsamples = 0;
+		info.numfragments = 0;
+		info.flags.enable_cmask_fastclear = cases[k].cmask;
+
+		GnmRenderTarget clean;
+		memset(&clean, 0, sizeof(clean));
+		GnmError err = sceGnmCreateRenderTarget(&clean, &info);
+		utasserteq((long long)err, (long long)GNM_ERROR_OK);
+
+		// Callers commonly pass an uninitialized stack object.
+		GnmRenderTarget dirty;
+		memset(&dirty, 0xa5, sizeof(dirty));
+		err = sceGnmCreateRenderTarget(&dirty, &info);
+		utasserteq((long long)err, (long long)GNM_ERROR_OK);
+		utassert(memcmp(&clean, &dirty, sizeof(clean)) == 0);
+	}
+	return test_success();
+}
+
 static TestResult test_helpers_shader_metadata(void) {
 	enum {
 		kHeaderSize = sizeof(GnmShaderFileHeader),
@@ -215,6 +253,8 @@ int run_tests_helpers(void) {
 	    {test_helpers_videoout_invalid_create_info,
 	     "VideoOut invalid create-info diagnostics"},
 	    {test_helpers_resource_setup, "Resource setup helpers"},
+	    {test_helpers_render_target_ignores_prior_contents,
+	     "Render target ignores prior contents"},
 	    {test_helpers_shader_metadata, "Shader metadata helper"},
 		    {test_helpers_wrapped_shader_metadata, "Wrapped shader metadata helper"},
 		    {test_helpers_zero_input_fetch_shader, "Zero-input fetch shader"},

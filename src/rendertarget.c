@@ -189,11 +189,15 @@ GnmError sceGnmCreateRenderTarget(
 		}
 	}
 
+	*rt = (GnmRenderTarget){0};
+
 	if (ci->mingpumode == GNM_GPU_NEO) {
 		rt->dcc_control.min_compressed_blocksize = 1;
 	}
 
-	const GnmTileMode tm = rt->attrib.tilemode_index;
+	// The final tile mode is only known after sceGpaComputeSurfaceInfo, so
+	// the requested one decides whether the surface depth spans the slices.
+	const GnmTileMode tm = ci->colortilemodehint;
 	const bool isthick =
 	    tm >= GNM_TM_THICK_1D_THICK && tm <= GNM_TM_THICK_3D_XTHICK;
 
