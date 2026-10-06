@@ -1187,9 +1187,9 @@ void sceGnmDrawCmdDispatchDirect(
 		return;
 	}
 
-	// PM4 header: DISPATCH_DIRECT, count=4, compute engine
+	// PM4 header: DISPATCH_DIRECT with 4 data dwords (count = 3), compute engine
 	const uint32_t predicate = (flags & 1) ? 1 : 0;
-	cmd->cmdptr[0] = PKT3(PKT3_DISPATCH_DIRECT, 4, predicate) |
+	cmd->cmdptr[0] = PKT3(PKT3_DISPATCH_DIRECT, 3, predicate) |
 			 PKT3_SHADER_TYPE_S(1);  // compute engine
 	cmd->cmdptr[1] = threadsx;
 	cmd->cmdptr[2] = threadsy;
