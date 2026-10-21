@@ -113,11 +113,9 @@ if(OPENGNM_ORBIS_PLATFORM)
     target_link_libraries(opengnm PUBLIC kernel SceGnmDriver SceVideoOut)
 else()
     target_compile_definitions(opengnm PUBLIC OPENGNM_GENERIC)
-    # The GpuAddr surface math calls log2() and friends, which glibc keeps in libm.
-    include(CheckLibraryExists)
-    check_library_exists(m log2 "" OPENGNM_HAVE_LIBM)
-    if(OPENGNM_HAVE_LIBM)
-        target_link_libraries(opengnm PUBLIC m)
+    # GpuAddr calls log2(), which Unix C libraries such as glibc provide in libm.
+    if(UNIX)
+        target_link_libraries(opengnm PRIVATE m)
     endif()
 endif()
 
@@ -177,6 +175,8 @@ install(FILES
 
 if(OPENGNM_ORBIS_PLATFORM)
     set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "-lkernel -lSceGnmDriver -lSceVideoOut")
+elseif(UNIX)
+    set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "-lm")
 else()
     set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "")
 endif()
