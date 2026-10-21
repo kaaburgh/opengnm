@@ -113,6 +113,12 @@ if(OPENGNM_ORBIS_PLATFORM)
     target_link_libraries(opengnm PUBLIC kernel SceGnmDriver SceVideoOut)
 else()
     target_compile_definitions(opengnm PUBLIC OPENGNM_GENERIC)
+    # The GpuAddr surface math calls log2() and friends, which glibc keeps in libm.
+    include(CheckLibraryExists)
+    check_library_exists(m log2 "" OPENGNM_HAVE_LIBM)
+    if(OPENGNM_HAVE_LIBM)
+        target_link_libraries(opengnm PUBLIC m)
+    endif()
 endif()
 
 # === Tests ===
