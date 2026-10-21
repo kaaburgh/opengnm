@@ -113,6 +113,10 @@ if(OPENGNM_ORBIS_PLATFORM)
     target_link_libraries(opengnm PUBLIC kernel SceGnmDriver SceVideoOut)
 else()
     target_compile_definitions(opengnm PUBLIC OPENGNM_GENERIC)
+    # GpuAddr calls log2(), which Unix C libraries such as glibc provide in libm.
+    if(UNIX)
+        target_link_libraries(opengnm PRIVATE m)
+    endif()
 endif()
 
 # === Tests ===
@@ -171,6 +175,8 @@ install(FILES
 
 if(OPENGNM_ORBIS_PLATFORM)
     set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "-lkernel -lSceGnmDriver -lSceVideoOut")
+elseif(UNIX)
+    set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "-lm")
 else()
     set(OPENGNM_PKGCONFIG_LIBS_PRIVATE "")
 endif()
